@@ -337,7 +337,7 @@ namespace noslq_pr.DAO.MYSQL
                     catch (MySqlException e)
                     {
                         transaction.Rollback();
-                        Console.Error.WriteLine(e.Message);
+                        Console.WriteLine(e.Message);
                     }
                 }
             }
