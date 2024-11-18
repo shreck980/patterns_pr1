@@ -4,6 +4,7 @@ using noslq_pr.Builder;
 using noslq_pr.DAO;
 using noslq_pr.DAO.MYSQL;
 using noslq_pr.Entities;
+using noslq_pr.Observer;
 
 namespace noslq_pr
 {
@@ -34,7 +35,9 @@ namespace noslq_pr
 
 
 
-                AuthorBuilder authorBuilder = new AuthorBuilder();
+                CustomerDAO.Attach(new LoggingListenerTXT());
+                CustomerDAO.GetCustomerByName("Sophia", "Li");
+                /*AuthorBuilder authorBuilder = new AuthorBuilder();
                 Author a1 = authorBuilder.SetName("Kate").SetSurname("Middelton").SetEmail("katelove@gmail.com")
                    .SetPhoneNumber("7593953").SetCountry("UK").SetCity("London")
                    .SetStreet("First Street").SetHouse(12).Build();
@@ -324,7 +327,7 @@ namespace noslq_pr
                 OrderDAO.AddOrder(order2);
                 OrderDAO.AddOrder(order3);
                 OrderDAO.AddOrder(order4);
-                OrderDAO.AddOrder(order1);
+                OrderDAO.AddOrder(order1);*/
 
               
 

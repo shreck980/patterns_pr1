@@ -1,0 +1,26 @@
+[18.11.2024 13:06:54]Operation: GetCustomerByName
+Search criteria: Customer name: Sophia Li
+--- GetCustomerByName Details ---
+Customer ID: 11
+Name: Sophia
+Surname: Li
+Customer Type: Other
+Email: sophia.li@outlook.com
+Phone Number: 321456987
+Address: Tiananmen Square 3, Apt 0, Beijing, China
+
+-----------------------
+
+[18.11.2024 13:07:58] Operation: GetCustomerByName
+Search criteria: customer name = Sophia Li
+--- GetCustomerByName Details ---
+Customer ID: 11
+Name: Sophia
+Surname: Li
+Customer Type: Other
+Email: sophia.li@outlook.com
+Phone Number: 321456987
+Address: Tiananmen Square 3, Apt 0, Beijing, China
+
+-----------------------
+

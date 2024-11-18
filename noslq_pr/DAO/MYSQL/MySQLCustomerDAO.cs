@@ -1,13 +1,17 @@
 ﻿using MySqlConnector;
 using noslq_pr.Builder;
 using noslq_pr.Entities;
+using noslq_pr.Observer;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using IObserver = noslq_pr.Observer.IObserver;
+
 
 namespace noslq_pr.DAO.MYSQL
 {
@@ -22,6 +26,9 @@ namespace noslq_pr.DAO.MYSQL
         private const string getFullByName = "SELECT p.id, p.name,p.surname, p.email, p.phone_number, c.customer_type_id,\r\n       p.address_book_address_id,ad.country, ad.city, ad.street,ad.house,ad.apartment\r\nFROM customer c\r\n  join  person p on c.id = p.id\r\n  join  address_book ad  ON p.address_book_address_id = ad.address_id\r\nWHERE p.name = @name and p.surname=@surname;";
         private const string getFullByCountry = "select  p.id, p.name,p.surname, p.email, p.phone_number, c.customer_type_id,\r\np.address_book_address_id,ad.country, ad.city, ad.street,ad.house,ad.apartment \r\nfrom customer c\r\njoin person p on p.id = c.id\r\njoin  address_book ad  ON p.address_book_address_id = ad.address_id\r\nwhere ad.country = @country;";
 
+
+
+        private List<IObserver> _observers = new List<IObserver>();
         public MySQLCustomerDAO()
         {
             daoConfig = DAOConfig.GetDAOConfig();
@@ -165,6 +172,14 @@ namespace noslq_pr.DAO.MYSQL
                     catch (Exception e)
                     {
                         Console.WriteLine(e.ToString());
+                    }
+                    finally
+                    {
+                        Notify(
+                            System.Reflection.MethodBase.GetCurrentMethod().Name,
+                            $"customer name = {name} {surname}",
+                            p.Build()
+                            );
                     }
                     return p.Build();
                 }
@@ -343,6 +358,26 @@ namespace noslq_pr.DAO.MYSQL
             }
 
 
+        }
+
+        public void Attach(IObserver observer)
+        {
+            Console.WriteLine("Observer attached to MySQLCustomerDAO");
+            _observers.Add(observer);
+        }
+
+        public void Detach(IObserver observer)
+        {
+            Console.WriteLine("Observer detached to MySQLCustomerDAO");
+            _observers.Remove(observer);
+        }
+
+        public void Notify(string operation, object criteria, object result)
+        {
+            Console.WriteLine("Observer attached to MySQLCustomerDAO");
+            foreach(var observer in _observers) {
+                observer.Update(operation,criteria,result);
+            }
         }
     }
 }
