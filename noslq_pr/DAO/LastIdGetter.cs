@@ -5,9 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace noslq_pr.DAO
 {
-    public class LastIdGetter
+    public class LastIdGetter  
     {
         protected string GetLastID;
         protected long GetLastId(MySqlConnection connection, MySqlTransaction transaction)

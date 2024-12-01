@@ -2,6 +2,7 @@
 using MySqlConnector;
 using noslq_pr.Builder;
 using noslq_pr.Entities;
+using noslq_pr.Observer;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -23,6 +24,9 @@ namespace noslq_pr.DAO.MYSQL
         private const string insertAddress = "insert into address_book (address_id, country, city, street, house,apartment) values(@address_id, @country, @city, @street, @house,@appartment)";
 
         private const string insertPrintingHouse = "insert into printing_house (id,name,phone_number,address) values(@id, @name,@phone_number, @address)";
+
+        private List<IObserver> _observers = new List<IObserver>();
+
         public MySQLPrintingHouseDAO()
         {
             daoConfig = DAOConfig.GetDAOConfig();
@@ -30,7 +34,7 @@ namespace noslq_pr.DAO.MYSQL
         }
         public void AddPrintingHouse(PrintingHouse c)
         {
-
+            StringBuilder result = new StringBuilder();
             using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
             {
                 con.Open();
@@ -51,8 +55,8 @@ namespace noslq_pr.DAO.MYSQL
                             com.Parameters.AddWithValue("@appartment",
                                 c.Address.Apartment.HasValue ? c.Address.Apartment : 0);
 
-                            com.ExecuteNonQuery();
-
+                            int rowsAffected = com.ExecuteNonQuery();
+                            result.Append($"Insert Address: {rowsAffected} row(s) updated; ");
 
                         }
 
@@ -65,8 +69,8 @@ namespace noslq_pr.DAO.MYSQL
                             com.Parameters.AddWithValue("@phone_number", c.PhoneNumber);
                             com.Parameters.AddWithValue("@address", c.Address.Id);
 
-                            com.ExecuteNonQuery();
-
+                            int rowsAffected =  com.ExecuteNonQuery();
+                            result.Append($"Insert Printing House: {rowsAffected} row(s) updated; ");
                         }
                         transaction.Commit();
                     }
@@ -74,7 +78,12 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.Error.WriteLine(e.Message);
+                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                          c, e.Message);
                     }
+
+                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                          c,result.ToString());
                 }
             }
         }
@@ -250,7 +259,7 @@ namespace noslq_pr.DAO.MYSQL
             }
 
 
-
+            StringBuilder result = new StringBuilder();
             using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
             {
                 con.Open();
@@ -269,7 +278,7 @@ namespace noslq_pr.DAO.MYSQL
                                 com.Parameters.AddWithValue("@id", a.Address.Id);
                                 com.Parameters.AddRange(updateAddressParams.ToArray());
                                 int rowsAffected = com.ExecuteNonQuery();
-                                Console.WriteLine($"{rowsAffected} row(s) updated.");
+                                result.Append($"Update Address: {rowsAffected} row(s) updated; ");
 
                             }
                         }
@@ -285,7 +294,7 @@ namespace noslq_pr.DAO.MYSQL
                                 com.Parameters.AddWithValue("@id", a.Id);
                                 com.Parameters.AddRange(updatePrintingHouseParams.ToArray());
                                 int rowsAffected = com.ExecuteNonQuery();
-                                Console.WriteLine($"{rowsAffected} row(s) updated.");
+                                result.Append($"Update Printing House: {rowsAffected} row(s) updated; ");
 
                             }
                         }
@@ -298,7 +307,11 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.Error.WriteLine(e.Message);
+                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                            a, e.Message);
                     }
+                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                          a, result.ToString());
                 }
             }
 
@@ -342,6 +355,27 @@ namespace noslq_pr.DAO.MYSQL
                 Console.WriteLine(e.Message);
             }
             return p;
+        }
+
+        public void Attach(IObserver observer)
+        {
+            Console.WriteLine($"Attached observer {observer.GetType()} to MySQLPrintingHouseDAO");
+            _observers.Add(observer);
+        }
+
+        public void Detach(IObserver observer)
+        {
+            Console.WriteLine($"detached observer {observer.GetType()} from MySQLPrintingHouseDAO");
+            _observers.Add(observer);
+        }
+
+        public void Notify(string operation, object criteria, object result)
+        {
+            Console.WriteLine($"Notified observers of MySQLPrintingHouseDAO");
+            foreach (var obs in _observers)
+            {
+                obs.Update(operation, criteria, result);
+            }
         }
     }
     

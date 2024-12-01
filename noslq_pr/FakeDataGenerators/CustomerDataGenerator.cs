@@ -9,20 +9,21 @@ using System.Threading.Tasks;
 
 namespace noslq_pr.FakeDataGenerators
 {
-    public class AuthorDataGenerator : IFakeDataGenerator<Author>
+    public class CustomerDataGenerator : IFakeDataGenerator<Customer>
     {
-        Faker<AuthorBuilder> authorModel;
+        Faker<CustomerBuilder> customerModel;
         Faker<Address> addressModel;
-        public Author GetFakeData()
+        public Customer GetFakeData()
         {
-            authorModel = new Faker<AuthorBuilder>()
-                      
-            .RuleFor(u => u.Name, f => f.Name.FirstName())                
-            .RuleFor(u => u.Surname, f => f.Name.LastName())              
-            .RuleFor(u => u.Email, f => f.Internet.Email())              
-            .RuleFor(u => u.PhoneNumber, f => f.Phone.PhoneNumberFormat())      
+            customerModel = new Faker<CustomerBuilder>()
+
+            .RuleFor(u => u.Name, f => f.Name.FirstName())
+            .RuleFor(u => u.Surname, f => f.Name.LastName())
+            .RuleFor(u => u.Email, f => f.Internet.Email())
+            .RuleFor(u => u.PhoneNumber, f => f.Phone.PhoneNumberFormat())
+            .RuleFor(u => u.CustomerType, f => (CustomerType)f.Random.Int(1, 5));
                   
-            .RuleFor(u => u.Pseudonym, f => f.Name.FirstName() + " " + f.Name.LastName());
+
 
             addressModel = new Faker<Address>()
      
@@ -32,11 +33,12 @@ namespace noslq_pr.FakeDataGenerators
            .RuleFor(u => u.House, f => f.Random.Int(1, 500))    
            .RuleFor(u => u.Apartment, f => f.Random.Bool() ? f.Random.Int(1, 200) : 0);
             
-            var fakeAuthor = authorModel.Generate();
+            var fakeCustomer = customerModel.Generate();
             var fakeAddress = addressModel.Generate();
 
 
-            return fakeAuthor
+
+            return fakeCustomer
             .SetCountry(fakeAddress.Country)
             .SetCity(fakeAddress.City)
             .SetStreet(fakeAddress.Street)

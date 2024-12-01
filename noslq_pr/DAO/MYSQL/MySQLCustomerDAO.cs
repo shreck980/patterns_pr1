@@ -94,7 +94,12 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.Error.WriteLine(e.Message);
+
+                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                           c, e.Message);
                     }
+                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                           c, "Customer inserted successfully");
                 }
             }
         }
@@ -291,7 +296,7 @@ namespace noslq_pr.DAO.MYSQL
             }
 
 
-
+            StringBuilder result = new StringBuilder();
             using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
             {
                 con.Open();
@@ -310,7 +315,7 @@ namespace noslq_pr.DAO.MYSQL
                                 com.Parameters.AddWithValue("@id", a.Address.Id);
                                 com.Parameters.AddRange(updateAddressParams.ToArray());
                                 int rowsAffected = com.ExecuteNonQuery();
-                                Console.WriteLine($"{rowsAffected} row(s) updated.");
+                                result.Append($"Update Address: {rowsAffected} row(s) updated; ");
 
                             }
                         }
@@ -326,12 +331,12 @@ namespace noslq_pr.DAO.MYSQL
                                 com.Parameters.AddWithValue("@id", a.Id);
                                 com.Parameters.AddRange(updatePersonParams.ToArray());
                                 int rowsAffected = com.ExecuteNonQuery();
-                                Console.WriteLine($"{rowsAffected} row(s) updated.");
+                                result.Append($"Update Person: {rowsAffected} row(s) updated; ");
 
                             }
                         }
 
-                        if (!String.IsNullOrEmpty(updateAddressQuery) && updateCustomerParams is not null)
+                        if (!String.IsNullOrEmpty(updateCustomerQuery) && updateCustomerParams is not null)
                         {
 
                             using (var com = new MySqlCommand(updateCustomerQuery, con))
@@ -342,7 +347,7 @@ namespace noslq_pr.DAO.MYSQL
                                 com.Parameters.AddRange(updateCustomerParams.ToArray());
 
                                 int rowsAffected = com.ExecuteNonQuery();
-                                Console.WriteLine($"{rowsAffected} row(s) updated.");
+                                result.Append($"Update Customer: {rowsAffected} row(s) updated; ");
 
                             }
                         }
@@ -353,7 +358,11 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.WriteLine(e.Message);
+                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                           a, e.Message);
                     }
+                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                           a,result.ToString());
                 }
             }
 

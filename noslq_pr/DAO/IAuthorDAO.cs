@@ -1,4 +1,5 @@
 ﻿using noslq_pr.Entities;
+using noslq_pr.Observer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace noslq_pr.DAO
 {
-    public interface  IAuthorDAO
+    public interface  IAuthorDAO: ISubject
     {
 
         void AddAuthor(Author p);

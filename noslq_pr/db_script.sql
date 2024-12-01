@@ -4,13 +4,7 @@ SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
 
--- -----------------------------------------------------
--- Schema mydb
--- -----------------------------------------------------
--- -----------------------------------------------------
--- Schema publshing_house_nosql
--- -----------------------------------------------------
-DROP SCHEMA IF EXISTS `publshing_house_nosql` ;
+
 
 -- -----------------------------------------------------
 -- Schema publshing_house_nosql
@@ -21,8 +15,6 @@ USE `publshing_house_nosql` ;
 -- -----------------------------------------------------
 -- Table `publshing_house_nosql`.`address_book`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `publshing_house_nosql`.`address_book` ;
-
 CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`address_book` (
   `address_id` INT NOT NULL AUTO_INCREMENT,
   `country` VARCHAR(50) NOT NULL,
@@ -32,7 +24,7 @@ CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`address_book` (
   `apartment` INT NULL DEFAULT NULL,
   PRIMARY KEY (`address_id`))
 ENGINE = InnoDB
-AUTO_INCREMENT = 49
+AUTO_INCREMENT = 351
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_0900_ai_ci;
 
@@ -40,8 +32,6 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 -- Table `publshing_house_nosql`.`person`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `publshing_house_nosql`.`person` ;
-
 CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`person` (
   `id` INT NOT NULL,
   `name` VARCHAR(60) NOT NULL,
@@ -62,8 +52,6 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 -- Table `publshing_house_nosql`.`author`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `publshing_house_nosql`.`author` ;
-
 CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`author` (
   `pseudonym` VARCHAR(150) NULL DEFAULT NULL,
   `id` INT NOT NULL,
@@ -80,8 +68,6 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 -- Table `publshing_house_nosql`.`customer_type`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `publshing_house_nosql`.`customer_type` ;
-
 CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`customer_type` (
   `id` INT NOT NULL,
   `type` VARCHAR(45) NOT NULL,
@@ -94,8 +80,6 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 -- Table `publshing_house_nosql`.`customer`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `publshing_house_nosql`.`customer` ;
-
 CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`customer` (
   `id` INT NOT NULL,
   `customer_type_id` INT NOT NULL,
@@ -120,8 +104,6 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 -- Table `publshing_house_nosql`.`genre`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `publshing_house_nosql`.`genre` ;
-
 CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`genre` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `genre` VARCHAR(45) NOT NULL,
@@ -136,8 +118,6 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 -- Table `publshing_house_nosql`.`order_status`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `publshing_house_nosql`.`order_status` ;
-
 CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`order_status` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `order_status` VARCHAR(20) NOT NULL,
@@ -152,8 +132,6 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 -- Table `publshing_house_nosql`.`printing_house`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `publshing_house_nosql`.`printing_house` ;
-
 CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`printing_house` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(30) NOT NULL,
@@ -168,7 +146,7 @@ CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`printing_house` (
     ON DELETE RESTRICT
     ON UPDATE RESTRICT)
 ENGINE = InnoDB
-AUTO_INCREMENT = 5
+AUTO_INCREMENT = 21
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_0900_ai_ci;
 
@@ -176,8 +154,6 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 -- Table `publshing_house_nosql`.`order`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `publshing_house_nosql`.`order` ;
-
 CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`order` (
   `id` INT NOT NULL,
   `acceptance_date` DATETIME NOT NULL,
@@ -210,8 +186,6 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 -- Table `publshing_house_nosql`.`publication`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `publshing_house_nosql`.`publication` ;
-
 CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`publication` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `title` VARCHAR(255) NOT NULL,
@@ -227,7 +201,7 @@ CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`publication` (
     ON DELETE RESTRICT
     ON UPDATE RESTRICT)
 ENGINE = InnoDB
-AUTO_INCREMENT = 30
+AUTO_INCREMENT = 118
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_0900_ai_ci;
 
@@ -235,8 +209,6 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 -- Table `publshing_house_nosql`.`print_quality`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `publshing_house_nosql`.`print_quality` ;
-
 CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`print_quality` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `cost_per_sheet` INT NOT NULL,
@@ -253,8 +225,6 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 -- Table `publshing_house_nosql`.`order_publication`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `publshing_house_nosql`.`order_publication` ;
-
 CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`order_publication` (
   `order` INT NOT NULL,
   `punlication` INT NOT NULL,
@@ -287,8 +257,6 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 -- Table `publshing_house_nosql`.`publication_author`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `publshing_house_nosql`.`publication_author` ;
-
 CREATE TABLE IF NOT EXISTS `publshing_house_nosql`.`publication_author` (
   `publications_id` INT NOT NULL,
   `author_id` INT NOT NULL,
@@ -314,6 +282,7 @@ SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 
 
 
+
 INSERT INTO `publshing_house_nosql`.`order_status` (id,`order_status`) VALUES
     (1,'Pending'),      -- Order has been placed and is awaiting processing
     (2,'InProduction'), -- Order is being prepared (e.g., books are being printed)
@@ -330,9 +299,9 @@ VALUES
 (5, 'Author');
 
 INSERT INTO `publshing_house_nosql`.`print_quality` (id,`quality`, `cost_per_sheet`) VALUES
-    (1, 'Low', 5),        -- Cost for low-quality print
-    (2, 'Medium', 10),    -- Cost for medium-quality print
-    (3, 'High', 15),      -- Cost for high-quality print
+    (1, 'Low', 5),        
+    (2, 'Medium', 10),   
+    (3, 'High', 15),      
     (4, 'Premium', 25);
 
     INSERT INTO genre (id,genre) VALUES 

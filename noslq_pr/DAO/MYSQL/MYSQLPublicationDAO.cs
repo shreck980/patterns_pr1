@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using System.Data;
 using noslq_pr.Builder;
+using noslq_pr.Observer;
 
 namespace noslq_pr.DAO.MYSQL
 {
@@ -30,6 +31,10 @@ namespace noslq_pr.DAO.MYSQL
        
        //private const string insertAddress = "insert into address_book (address_id, country, city, street, house,apartment) values(@address_id, @country, @city, @street, @house,@appartment)";
         private readonly MySQLAuthorDAO authorDAO;
+
+
+        private List<IObserver> _observers = new List<IObserver>();
+
         public MYSQLPublicationDAO()
         {
             daoConfig = DAOConfig.GetDAOConfig();
@@ -40,8 +45,9 @@ namespace noslq_pr.DAO.MYSQL
 
 
 
-        public void AddPublication(Publication p, MySqlTransaction transaction, MySqlConnection con)
+        public void AddPublication(Publication p, MySqlTransaction transaction, MySqlConnection con,StringBuilder result)
         {
+            
             p.Id = GetLastId(con, transaction) + 1;
             using (var c = new MySqlCommand(insert, con))
             {
@@ -53,7 +59,8 @@ namespace noslq_pr.DAO.MYSQL
                 c.Parameters.AddWithValue("@genreId", p.Genre);
                 c.Parameters.AddWithValue("@price", p.Price);
 
-                c.ExecuteNonQuery();
+                int rowsAffected = c.ExecuteNonQuery();
+                result.Append($"Add publication: {rowsAffected} row(s) inserted;\n");
 
             }
 
@@ -83,7 +90,7 @@ namespace noslq_pr.DAO.MYSQL
 
                 if (a.Id == 0)
                 {
-                    authorDAO.AddAuthor(a, transaction, con);
+                    authorDAO.AddAuthor(a, transaction, con, result);
                 
                 }
 
@@ -97,7 +104,8 @@ namespace noslq_pr.DAO.MYSQL
                 {
                     com.Parameters.AddWithValue("author_ID", a.Id);
                     com.Parameters.AddWithValue("publications_id", p.Id);
-                    com.ExecuteNonQuery();
+                    int rowsAffected = com.ExecuteNonQuery();
+                    result.Append($"Added authors to publication: {rowsAffected} row(s) inserted;\n");
                     com.Parameters.Clear();
                 }
             }
@@ -106,11 +114,12 @@ namespace noslq_pr.DAO.MYSQL
 
         public void AddPublication(Publication p)
         {
+
             if (authorDAO == null)
             {
                 throw new Exception("Author dao is null");
             }
-
+            StringBuilder result = new StringBuilder();
             using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
             {
                 con.Open();
@@ -119,7 +128,7 @@ namespace noslq_pr.DAO.MYSQL
                     try
                     {
 
-                        AddPublication(p, transaction, con);
+                        AddPublication(p, transaction, con,result);
 
                         transaction.Commit();
                     }
@@ -127,7 +136,11 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.Error.WriteLine(e.Message);
+                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                            p, e.Message);
                     }
+                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                            p, result.ToString());
                 }
             }
         }
@@ -526,7 +539,7 @@ namespace noslq_pr.DAO.MYSQL
             }
             
 
-
+            StringBuilder result = new StringBuilder();
             using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
             {
                 con.Open();
@@ -545,7 +558,7 @@ namespace noslq_pr.DAO.MYSQL
                                 com.Parameters.AddWithValue("@id", a.Id);
                                 com.Parameters.AddRange(updatePublicationParams.ToArray());
                                 int rowsAffected = com.ExecuteNonQuery();
-                                Console.WriteLine($"{rowsAffected} row(s) updated.");
+                                result.Append($"{rowsAffected} row(s) updated.");
 
                             }
                         }
@@ -558,12 +571,36 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.Error.WriteLine(e.Message);
+                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                            a, e.Message);
                     }
+
+                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                           a, result.ToString());
                 }
             }
 
-
         }
-    
+
+        public void Attach(IObserver observer)
+        {
+            Console.WriteLine($"Attached observer {observer.GetType()} to MySQLPublicationDAO");
+            _observers.Add(observer);
+        }
+
+        public void Detach(IObserver observer)
+        {
+            Console.WriteLine($"Detached observer {observer.GetType()} from MySQLPublicationDAO");
+            _observers.Add(observer);
+        }
+
+        public void Notify(string operation, object criteria, object result)
+        {
+            Console.WriteLine($"Notified observers of MySQLPublicationDAO");
+            foreach (var obs in _observers)
+            {
+                obs.Update(operation, criteria, result);
+            }
+        }
     }
 }

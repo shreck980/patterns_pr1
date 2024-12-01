@@ -10,42 +10,58 @@ using System.Threading.Tasks;
 
 namespace noslq_pr.Observer
 {
-    internal class LoggingListenerJSON : IObserver
+    public class LoggingListenerJSON : IObserver
     {
+
+        public string FileName { get; set; }
+        public LoggingListenerJSON(string fileName)
+        {
+            FileName = fileName;
+        }
+
         public void Update(string operation, object criteria, object result)
         {
-            var logEntry = new JObject
+            try
             {
-                ["Timestamp"] = DateTime.UtcNow.ToString("o"),
-                ["Operation"] = operation,
-                ["Criteria"] = JToken.FromObject(criteria),
-                ["Result"] = JToken.FromObject(result)
-            };
-
-
-            string jsonLog = System.Text.Json.JsonSerializer.Serialize(logEntry, new JsonSerializerOptions { WriteIndented = true });
-            //string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log.json");
-            string logFilePath = Path.Combine("D:\\projects\\C#\\patterns_pr2\\noslq_pr\\Observer\\", "log.json");
-
-
-            List<JObject> combinedJsonObjects = new List<JObject>();
-            if (File.Exists(logFilePath))
-            {
-                
-                string existingContent = File.ReadAllText(logFilePath);
-                if (!string.IsNullOrWhiteSpace(existingContent))
+                var logEntry = new JObject
                 {
-                    JObject[] jsonObject = JsonConvert.DeserializeObject<JObject[]>(existingContent);
-                    combinedJsonObjects.AddRange(jsonObject);
+                    ["Timestamp"] = DateTime.UtcNow.ToString("o"),
+                    ["Operation"] = operation,
+                    ["Criteria"] = JToken.FromObject(criteria),
+                    ["Result"] = JToken.FromObject(result)
+                };
+
+
+                string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Log", FileName + ".jsonl");
+
+                /*List <JObject> combinedJsonObjects = new List<JObject>();
+                if (File.Exists(logFilePath))
+                {
+
+                    string existingContent = File.ReadAllText(logFilePath);
+                    if (!string.IsNullOrWhiteSpace(existingContent))
+                    {
+                        JObject[] jsonObject = JsonConvert.DeserializeObject<JObject[]>(existingContent);
+                        combinedJsonObjects.AddRange(jsonObject);
+                    }
+
+
+
                 }
-
                 combinedJsonObjects.Add(logEntry);
-                
+
+                string combinedJson = JsonConvert.SerializeObject(combinedJsonObjects, Newtonsoft.Json.Formatting.Indented);
+
+                File.WriteAllText(logFilePath, combinedJson);*/
+
+                using (var writer = new StreamWriter(logFilePath, append: true))
+                {
+                    writer.WriteLine(logEntry.ToString(Newtonsoft.Json.Formatting.None));
+                }
+            } catch (Exception ex)
+            {
+                Console.WriteLine($"Error logging operation: {ex.Message}");
             }
-
-            string combinedJson = JsonConvert.SerializeObject(combinedJsonObjects, Newtonsoft.Json.Formatting.Indented);
-
-            File.WriteAllText(logFilePath, combinedJson);
         }
     }
 }

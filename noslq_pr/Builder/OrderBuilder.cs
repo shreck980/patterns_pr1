@@ -74,9 +74,9 @@ namespace noslq_pr.Builder
 
         public Order Build()
         {
-            if (Publications.Count == 0 || String.IsNullOrEmpty(Customer.Name)
+            /*if (Publications.Count == 0 || String.IsNullOrEmpty(Customer.Name)
                 || String.IsNullOrEmpty(PrintingHouse.Name)) 
-                throw new Exception("Unable to create instance of Order, requiared fields are empty");
+                throw new Exception("Unable to create instance of Order, requiared fields are empty");*/
             return new Order(this);
         }
 

@@ -40,8 +40,8 @@ namespace noslq_pr.Entities
                 ? string.Join("\n\n", Authors.Select(a=>a.ToString()))
                 : "No Authors";
 
-            return $"Id: {Id}, Title: {Title}, PageCount: {PageCount}, Circulation: {Circulation}, Price: {Price:C}, " +
-                   $"Genre: {Genre}, PrintQuality: {PrintQuality}, Quantity: {Quantity}, \nAuthors:\n\n{authorsList}";
+            return $"Id: {Id} \nTitle: {Title}, \nPageCount: {PageCount}, \nCirculation: {Circulation}, Price: {Price}$, " +
+                   $"Genre: {Genre}, \nPrintQuality: {PrintQuality}, Quantity: {Quantity}, \n---Authors---\n{authorsList}";
         }
     }
 

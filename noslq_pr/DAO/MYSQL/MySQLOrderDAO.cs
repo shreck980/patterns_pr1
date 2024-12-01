@@ -1,6 +1,7 @@
 ﻿using MySqlConnector;
 using noslq_pr.Builder;
 using noslq_pr.Entities;
+using noslq_pr.Observer;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -39,6 +40,8 @@ namespace noslq_pr.DAO.MYSQL
         private const string getLittleStatus = "SELECT * FROM `order` WHERE status = @status;";
 
         private readonly MYSQLPublicationDAO publicationDAO;
+
+        private List<IObserver> _observers = new List<IObserver>();
         public MySQLOrderDAO()
         {
 
@@ -57,6 +60,7 @@ namespace noslq_pr.DAO.MYSQL
                 throw new Exception("publication dao is null");
             }
 
+            StringBuilder result = new StringBuilder();
             using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
             {
                 con.Open();
@@ -78,13 +82,14 @@ namespace noslq_pr.DAO.MYSQL
                             c.Parameters.AddWithValue("@total_price", o.Price);
                             c.Parameters.AddWithValue("@printing_house", o.PrintingHouse.Id);
 
-                            c.ExecuteNonQuery();
+                            int rowsAffected = c.ExecuteNonQuery();
+                            result.Append($"Insert Order: {rowsAffected} row(s) inserted;\n");
 
                         }
 
                         foreach (var p in o.Publications)
                         {
-                            publicationDAO.AddPublication(p,transaction,con);
+                            publicationDAO.AddPublication(p,transaction,con,result);
 
 
                             using (var com = new MySqlCommand(insertPublToOrder, con))
@@ -95,8 +100,9 @@ namespace noslq_pr.DAO.MYSQL
                                 com.Parameters.AddWithValue("@punlication", p.Id);
                                 com.Parameters.AddWithValue("@print_quality", p.PrintQuality);
                                 com.Parameters.AddWithValue("@quantity", p.Quantity);
-                                com.ExecuteNonQuery();
-
+                                int rowsAffected = com.ExecuteNonQuery();
+                                result.Append($"Add publication to order: {rowsAffected} row(s) inserted;\n");
+                               
                             }
 
                         }
@@ -109,7 +115,11 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.Error.WriteLine(e.Message);
+                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                           o, e.Message);
                     }
+                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                           o, result.ToString());
                 }
             }
         }
@@ -297,7 +307,7 @@ namespace noslq_pr.DAO.MYSQL
         public void UpdateOrder(Order a)
         {
             var updatedValuesOrder = new Dictionary<string, object>();
-
+            StringBuilder result = new StringBuilder();
 
             if (a.Status != OrderStatus.Other) updatedValuesOrder.Add("status", a.Status);
             if (a.PrintingHouse.Id != 0) updatedValuesOrder.Add("printing_house", a.PrintingHouse.Id);
@@ -332,7 +342,7 @@ namespace noslq_pr.DAO.MYSQL
                                 com.Parameters.AddWithValue("@id", a.Id);
                                 com.Parameters.AddRange(updateOrderParams.ToArray());
                                 int rowsAffected = com.ExecuteNonQuery();
-                                Console.WriteLine($"{rowsAffected} row(s) updated.");
+                                result.Append($"{rowsAffected} row(s) inserted;\n");
 
                             }
                         }
@@ -345,13 +355,18 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.Error.WriteLine(e.Message);
+                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                          a, e.Message);
                     }
+                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                          a, result);
                 }
             }
         }
 
         public void UpdateOrderPublication(Order o)
         {
+            StringBuilder result = new StringBuilder();
             using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
             {
                 con.Open();
@@ -367,25 +382,29 @@ namespace noslq_pr.DAO.MYSQL
                             com.Transaction= transaction;
                             com.Parameters.AddWithValue("@id", o.Id);
                             int rows =  com.ExecuteNonQuery();
-                            Console.WriteLine($"{rows} row(s) updated.");
+                            result.Append($"{rows} row(s) deleted;\n");
                         }
 
-                        using (var com = new MySqlCommand(insertPublToOrder, con))
-                        {
 
-                            com.Transaction = transaction;
-                            foreach (var p in o.Publications)
+                        foreach (var p in o.Publications)
+                        {
+                            publicationDAO.AddPublication(p, transaction, con, result);
+
+
+                            using (var com = new MySqlCommand(insertPublToOrder, con))
                             {
+                                com.Transaction = transaction;
+
                                 com.Parameters.AddWithValue("@order", o.Id);
                                 com.Parameters.AddWithValue("@punlication", p.Id);
                                 com.Parameters.AddWithValue("@print_quality", p.PrintQuality);
                                 com.Parameters.AddWithValue("@quantity", p.Quantity);
-                                com.ExecuteNonQuery();
-                                com.Parameters.Clear();
+                                int rowsAffected = com.ExecuteNonQuery();
+                                result.Append($"Add  publication to order: {rowsAffected} row(s) inserted;\n");
+
                             }
 
                         }
-
 
                             transaction.Commit();
                     }
@@ -393,11 +412,35 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.Error.WriteLine(e.Message);
+                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                          o, e.Message);
                     }
+                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                          o, result.ToString());
                 }
             }
         }
 
+        public void Attach(IObserver observer)
+        {
+            Console.WriteLine($"Attached observer {observer.GetType()} to MySQLPrintingHouseDAO");
+            _observers.Add(observer);
+        }
+
+        public void Detach(IObserver observer)
+        {
+            Console.WriteLine($"Detached observer {observer.GetType()} to MySQLPrintingHouseDAO");
+            _observers.Remove(observer);
+        }
+
+        public void Notify(string operation, object criteria, object result)
+        {
+            Console.WriteLine($"Notified observers of MySQLOrderDAO");
+            foreach (var o in _observers)
+            {
+                o.Update(operation, criteria, result);
+            }
+        }
     }
 
 }

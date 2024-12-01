@@ -46,7 +46,7 @@ namespace noslq_pr.Builder
             PhoneNumber = phoneNumber;
             return (T)this;
         }
-        public T SetAddressId(int AddressId)
+        public T SetAddressId(long AddressId)
         {
             Address.Id = AddressId;
             return (T)this;

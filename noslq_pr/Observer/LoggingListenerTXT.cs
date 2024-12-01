@@ -6,21 +6,25 @@ using System.Threading.Tasks;
 
 namespace noslq_pr.Observer
 {
-    internal class LoggingListenerTXT : IObserver
+    public class LoggingListenerTXT : IObserver
     {
+        public string FileName { get; set; }
+        public LoggingListenerTXT(string fileName) {
+            FileName = fileName;
+        }
         public void Update(string operation, object criteria, object result)
         {
             StringBuilder sb = new StringBuilder();
 
             sb.Append($"[{DateTime.UtcNow.ToString()}]");
             sb.Append(" Operation: " +operation+"\n");
-            sb.Append("Search criteria: " +criteria+"\n");
+            sb.Append("Search criteria:\n" +criteria+"\n");
             sb.Append("--- "+operation+" Details ---\n");
             sb.Append(result);
             sb.Append("\n-----------------------\n");
 
-
-            using (StreamWriter writer = new StreamWriter("D:\\projects\\C#\\patterns_pr2\\noslq_pr\\Observer\\log.txt", true))
+            string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"Log", FileName + ".txt");
+            using (StreamWriter writer = new StreamWriter(logFilePath, true))
             {
                 writer.WriteLine(sb.ToString());
             }

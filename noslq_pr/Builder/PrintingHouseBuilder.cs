@@ -38,7 +38,7 @@ namespace noslq_pr.Builder
             return this;
         }
 
-        public PrintingHouseBuilder SetAddressId(int AddressId)
+        public PrintingHouseBuilder SetAddressId(long AddressId)
         {
             Address.Id = AddressId;
             return this;

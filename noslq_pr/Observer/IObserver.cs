@@ -9,7 +9,6 @@ namespace noslq_pr.Observer
 {
     public interface IObserver
     {
-
         void Update(string operation, object criteria, object result);
     }
 }

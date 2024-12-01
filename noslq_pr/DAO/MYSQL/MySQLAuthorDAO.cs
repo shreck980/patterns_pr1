@@ -1,6 +1,7 @@
 ﻿using MySqlConnector;
 using noslq_pr.Builder;
 using noslq_pr.Entities;
+using noslq_pr.Observer;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -29,13 +30,15 @@ namespace noslq_pr.DAO.MYSQL
         private const string insertAuthorsToPubl = "insert into publication_author(author_ID,publications_id) values(@author_ID, @publications_id);";
         private const string getAuthortByPubl = "select  p.id, p.name,p.surname, p.email, p.phone_number, a.pseudonym,\r\np.address_book_address_id,ad.country, ad.city, ad.street,ad.house,ad.apartment \r\nfrom publication_author pa\r\njoin author a on pa.author_ID  = a.id\r\njoin person p on p.id = a.id\r\njoin  address_book ad  ON p.address_book_address_id = ad.address_id\r\nwhere pa.publications_id = @id;";
 
+
+        private List<IObserver> _observers = new List<IObserver> ();
         public MySQLAuthorDAO()
         {
             daoConfig = DAOConfig.GetDAOConfig();
             GetLastID = "SELECT MAX(id) FROM person";
         }
 
-        public void AddAuthor(Author c,MySqlTransaction transaction,MySqlConnection con)
+        public void AddAuthor(Author c,MySqlTransaction transaction,MySqlConnection con, StringBuilder result)
         {
             c.Address.Id = GetLastId(con, transaction, "select max(address_id) from address_book") + 1;
             using (var com = new MySqlCommand(insertAddress, con))
@@ -49,7 +52,8 @@ namespace noslq_pr.DAO.MYSQL
                 com.Parameters.AddWithValue("@appartment",
                     c.Address.Apartment.HasValue ? c.Address.Apartment : 0);
 
-                com.ExecuteNonQuery();
+               int rowsAffected =  com.ExecuteNonQuery();
+               result.Append($"Insert adress of author: {rowsAffected} row(s) inserted;\n");
 
 
             }
@@ -67,7 +71,8 @@ namespace noslq_pr.DAO.MYSQL
 
                 com.Parameters.AddWithValue("@address_book_address_id", c.Address.Id);
 
-                com.ExecuteNonQuery();
+                int rowsAffected = com.ExecuteNonQuery();
+                result.Append($"Insert person as author of publication: {rowsAffected} row(s) inserted;\n");
 
 
             }
@@ -80,7 +85,8 @@ namespace noslq_pr.DAO.MYSQL
                 com.Parameters.AddWithValue("@pseudonym", "ppseudonym");
 
 
-                com.ExecuteNonQuery();
+                int rowsAffected = com.ExecuteNonQuery();
+                result.Append($"Insert author of publication: {rowsAffected} row(s) inserted;\n");
 
             }
            
@@ -89,6 +95,7 @@ namespace noslq_pr.DAO.MYSQL
 
         public void AddAuthor(Author c)
         {
+            StringBuilder result = new StringBuilder();
             using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
             {
                 con.Open();
@@ -98,7 +105,7 @@ namespace noslq_pr.DAO.MYSQL
                     try
                     {
                        
-                        AddAuthor(c,transaction,con);
+                        AddAuthor(c,transaction,con,result);
                          
                         transaction.Commit();
                     }
@@ -106,7 +113,12 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.Error.WriteLine(e.StackTrace);
+                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                            c, e.Message);
                     }
+
+                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                            c,result.ToString());
                 }
             }
         }
@@ -332,7 +344,7 @@ namespace noslq_pr.DAO.MYSQL
             }
 
 
-
+            StringBuilder result = new StringBuilder();
             using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
             {
                 con.Open();
@@ -351,7 +363,7 @@ namespace noslq_pr.DAO.MYSQL
                                 com.Parameters.AddWithValue("@id", a.Address.Id);
                                 com.Parameters.AddRange(updateAddressParams.ToArray());
                                 int rowsAffected = com.ExecuteNonQuery();
-                                Console.WriteLine($"{rowsAffected} row(s) updated.");
+                                result.Append($"Update Address: {rowsAffected} row(s) updated; ");
 
                             }
                         }
@@ -366,7 +378,7 @@ namespace noslq_pr.DAO.MYSQL
                                 com.Parameters.AddWithValue("@id", a.Id);
                                 com.Parameters.AddRange(updatePersonParams.ToArray());
                                 int rowsAffected = com.ExecuteNonQuery();
-                                Console.WriteLine($"{rowsAffected} row(s) updated.");
+                                result.Append($"Update Person: {rowsAffected} row(s) updated; ");
 
                             }
                         }
@@ -382,7 +394,7 @@ namespace noslq_pr.DAO.MYSQL
                                 com.Parameters.AddRange(updateAuthorParams.ToArray());
 
                                 int rowsAffected = com.ExecuteNonQuery();
-                                Console.WriteLine($"{rowsAffected} row(s) updated.");
+                                result.Append($"Update Author: {rowsAffected} row(s) updated; ");
 
                             }
                         }
@@ -393,11 +405,37 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.Error.WriteLine(e.Message);
+                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                            a, e.Message);
                     }
+
+                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                           a, result.ToString());
                 }
             }
 
 
+        }
+
+        public void Attach(IObserver observer)
+        {
+            Console.WriteLine($"Attached observer {observer.GetType()} to MySQLAuthorDAO");
+            _observers.Add(observer);
+        }
+
+        public void Detach(IObserver observer)
+        {
+            Console.WriteLine($"detached observer {observer.GetType()} from MySQLAuthorDAO");
+            _observers.Add(observer);
+        }
+
+        public void Notify(string operation, object criteria, object result)
+        {
+            Console.WriteLine($"Notified observers of MySQLAuthorDAO");
+            foreach(var obs in _observers)
+            {
+                obs.Update(operation, criteria, result);
+            }
         }
     }
 }

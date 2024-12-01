@@ -8,7 +8,6 @@ namespace noslq_pr.FakeDataGenerators
 {
     public interface IFakeDataGenerator<T>
     {
-
         T GetFakeData();
 
     }
