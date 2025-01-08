@@ -1,14 +1,18 @@
-﻿using MySqlConnector;
+﻿using MongoDB.Driver;
+using MySqlConnector;
 using noslq_pr.Builder;
 using noslq_pr.Entities;
 using noslq_pr.Observer;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Transactions;
 using System.Xml.Linq;
 using IObserver = noslq_pr.Observer.IObserver;
 
@@ -23,9 +27,10 @@ namespace noslq_pr.DAO.MYSQL
         private const string insertAddress = "insert into address_book (address_id, country, city, street, house,apartment) values(@address_id, @country, @city, @street, @house,@appartment)";
         
         private const string getFull = "SELECT p.id, p.name,p.surname, p.email, p.phone_number, c.customer_type_id,\r\n       p.address_book_address_id,ad.country, ad.city, ad.street,ad.house,ad.apartment\r\nFROM customer c\r\n  join  person p on c.id = p.id\r\n  join  address_book ad  ON p.address_book_address_id = ad.address_id\r\nWHERE c.id = @id;";
+        private const string getAllCustomers = "SELECT p.id, p.name,p.surname, p.email, p.phone_number, c.customer_type_id,\r\n       p.address_book_address_id,ad.country, ad.city, ad.street,ad.house,ad.apartment\r\nFROM customer c\r\n  join  person p on c.id = p.id\r\n  join  address_book ad  ON p.address_book_address_id = ad.address_id;";
         private const string getFullByName = "SELECT p.id, p.name,p.surname, p.email, p.phone_number, c.customer_type_id,\r\n       p.address_book_address_id,ad.country, ad.city, ad.street,ad.house,ad.apartment\r\nFROM customer c\r\n  join  person p on c.id = p.id\r\n  join  address_book ad  ON p.address_book_address_id = ad.address_id\r\nWHERE p.name = @name and p.surname=@surname;";
         private const string getFullByCountry = "select  p.id, p.name,p.surname, p.email, p.phone_number, c.customer_type_id,\r\np.address_book_address_id,ad.country, ad.city, ad.street,ad.house,ad.apartment \r\nfrom customer c\r\njoin person p on p.id = c.id\r\njoin  address_book ad  ON p.address_book_address_id = ad.address_id\r\nwhere ad.country = @country;";
-
+        private const string ifExistsByEmail = "select  p.id, p.email\r\nfrom customer c\r\njoin person p on p.id = c.id where email = @email limit 1;";
 
 
         private List<IObserver> _observers = new List<IObserver>();
@@ -39,7 +44,7 @@ namespace noslq_pr.DAO.MYSQL
             using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
             {
                 con.Open();
-                using (var transaction = con.BeginTransaction(IsolationLevel.ReadCommitted))
+                using (var transaction = con.BeginTransaction(System.Data.IsolationLevel.ReadCommitted))
                 {
                     
                     try
@@ -95,26 +100,226 @@ namespace noslq_pr.DAO.MYSQL
                         transaction.Rollback();
                         Console.Error.WriteLine(e.Message);
 
-                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
-                           c, e.Message);
+                        //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                           //c, e.Message);
                     }
-                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
-                           c, "Customer inserted successfully");
+                    //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                           //c, "Customer inserted successfully");
                 }
             }
         }
 
-        public Customer GetCustomer(int id)
+        public void AddCustomers(List<Customer> list)
         {
-            CustomerBuilder cb = new CustomerBuilder();
+            using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
+            {
+                con.Open();
+                using (var transaction = con.BeginTransaction(System.Data.IsolationLevel.ReadCommitted))
+                {
+
+                    try
+                    {
+                        foreach (var c in list)
+                        {
+                            c.Address.Id = GetLastId(con, transaction, "select max(address_id) from address_book") + 1;
+                            using (var com = new MySqlCommand(insertAddress, con))
+                            {
+                                com.Transaction = transaction;
+                                com.Parameters.AddWithValue("@address_id", c.Address.Id);
+                                com.Parameters.AddWithValue("@country", c.Address.Country);
+                                com.Parameters.AddWithValue("@city", c.Address.City);
+                                com.Parameters.AddWithValue("@street", c.Address.Street);
+                                com.Parameters.AddWithValue("@house", c.Address.House);
+                                com.Parameters.AddWithValue("@appartment",
+                                    c.Address.Apartment.HasValue ? c.Address.Apartment : 0);
+
+                                com.ExecuteNonQuery();
+
+
+                            }
+
+                            c.Id = GetLastId(con, transaction) + 1;
+                            using (var com = new MySqlCommand(insertPerson, con))
+                            {
+                                com.Transaction = transaction;
+                                com.Parameters.AddWithValue("@name", c.Name);
+                                com.Parameters.AddWithValue("@surname", c.Surname);
+                                com.Parameters.AddWithValue("@id", c.Id);
+                                com.Parameters.AddWithValue("@email", c.Email);
+                                com.Parameters.AddWithValue("@phone_number", c.PhoneNumber);
+
+                                com.Parameters.AddWithValue("@address_book_address_id", c.Address.Id);
+
+                                com.ExecuteNonQuery();
+
+                            }
+
+                            using (var com = new MySqlCommand(insertCustomer, con))
+                            {
+                                com.Transaction = transaction;
+
+                                com.Parameters.AddWithValue("@id", c.Id);
+                                com.Parameters.AddWithValue("@customer_type_id", c.CustomerType);
+
+
+                                com.ExecuteNonQuery();
+
+                            }
+                        }
+                        transaction.Commit();
+                    }
+                    catch (MySqlException e)
+                    {
+                        transaction.Rollback();
+                        Console.Error.WriteLine(e.Message);
+
+                        //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                        //c, e.Message);
+                    }
+                    //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                    //c, "Customer inserted successfully");
+                }
+            }
+        }
+
+        public void AddCustomerOrder(Customer c, MySqlConnection con, MySqlTransaction transaction)
+        {
+            try
+            {
+                using (var com = new MySqlCommand(ifExistsByEmail, con))
+                {
+                    com.Transaction = transaction;
+                    
+                    com.Parameters.AddWithValue("@email", c.Email);
+                    using (var reader = com.ExecuteReader())
+                    {
+
+                        if (reader.HasRows)
+                        {
+
+                            while (reader.Read())
+                            {
+                                c.Id = reader.GetInt32("id");
+                                
+
+                            }
+                            return;
+                        }
+
+                    }
+
+                }
+
+                    c.Address.Id = GetLastId(con, transaction, "select max(address_id) from address_book") + 1;
+                using (var com = new MySqlCommand(insertAddress, con))
+                {
+                    com.Transaction = transaction;
+                    com.Parameters.AddWithValue("@address_id", c.Address.Id);
+                    com.Parameters.AddWithValue("@country", c.Address.Country);
+                    com.Parameters.AddWithValue("@city", c.Address.City);
+                    com.Parameters.AddWithValue("@street", c.Address.Street);
+                    com.Parameters.AddWithValue("@house", c.Address.House);
+                    com.Parameters.AddWithValue("@appartment",
+                        c.Address.Apartment.HasValue ? c.Address.Apartment : 0);
+
+                    com.ExecuteNonQuery();
+                }
+
+                c.Id = GetLastId(con, transaction) + 1;
+                using (var com = new MySqlCommand(insertPerson, con))
+                {
+                    com.Transaction = transaction;
+                    com.Parameters.AddWithValue("@name", c.Name);
+                    com.Parameters.AddWithValue("@surname", c.Surname);
+                    com.Parameters.AddWithValue("@id", c.Id);
+                    com.Parameters.AddWithValue("@email", c.Email);
+                    com.Parameters.AddWithValue("@phone_number", c.PhoneNumber);
+
+                    com.Parameters.AddWithValue("@address_book_address_id", c.Address.Id);
+
+                    com.ExecuteNonQuery();
+
+                }
+
+                using (var com = new MySqlCommand(insertCustomer, con))
+                {
+                    com.Transaction = transaction;
+
+                    com.Parameters.AddWithValue("@id", c.Id);
+                    com.Parameters.AddWithValue("@customer_type_id", c.CustomerType);
+
+
+                    com.ExecuteNonQuery();
+
+                }
+
+            }
+            catch (MySqlException e)
+            {
+                transaction.Rollback();
+                Console.Error.WriteLine(e.Message);
+
+                //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                //c, e.Message);
+            }
+        }
+
+        public Customer GetCustomer(object objectId)
+        {
+            if (objectId is int id)
+            {
+                CustomerBuilder cb = new CustomerBuilder();
+                using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
+                {
+                    con.Open();
+
+
+                    using (var cmd = new MySqlCommand(getFull, con))
+                    {
+                        cmd.Parameters.AddWithValue("@id", id);
+                        try
+                        {
+                            using (var reader = cmd.ExecuteReader())
+                            {
+
+                                if (!reader.HasRows)
+                                {
+                                    throw new Exception("No data found for the query.");
+
+                                }
+                                while (reader.Read())
+                                {
+                                    cb = MapCustomer(reader);
+
+
+                                }
+
+                            }
+                        }
+                        catch (MySqlException e)
+                        {
+                            Console.WriteLine(e.Message);
+                        }
+                        return cb.Build();
+                    }
+                }
+            }
+            throw new Exception("Wrong Id type.");
+
+        }
+
+        public List<Customer> GetAllCustomers()
+        {
+
+            List<Customer> list = new List<Customer>();
             using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
             {
                 con.Open();
 
 
-                using (var cmd = new MySqlCommand(getFull, con))
+                using (var cmd = new MySqlCommand(getAllCustomers, con))
                 {
-                    cmd.Parameters.AddWithValue("@id", id);
+
                     try
                     {
                         using (var reader = cmd.ExecuteReader())
@@ -127,9 +332,9 @@ namespace noslq_pr.DAO.MYSQL
                             }
                             while (reader.Read())
                             {
-                               cb = MapCustomer(reader);
-                                
-                                  
+                                list.Add(MapCustomer(reader).Build());
+
+
                             }
 
                         }
@@ -138,11 +343,15 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         Console.WriteLine(e.Message);
                     }
-                    return cb.Build();
+                    return list;
+
                 }
             }
 
+            throw new Exception("Wrong Id type.");
+
         }
+
 
         public Customer GetCustomerByName(string name, string surname)
         {
@@ -180,11 +389,11 @@ namespace noslq_pr.DAO.MYSQL
                     }
                     finally
                     {
-                        Notify(
-                            System.Reflection.MethodBase.GetCurrentMethod().Name,
-                            $"customer name = {name} {surname}",
-                            p.Build()
-                            );
+                        //Notify(
+                            //System.Reflection.MethodBase.GetCurrentMethod().Name,
+                            //$"customer name = {name} {surname}",
+                            //p.Build()
+                            //);
                     }
                     return p.Build();
                 }
@@ -235,7 +444,7 @@ namespace noslq_pr.DAO.MYSQL
             CustomerBuilder cb = new CustomerBuilder();
             cb.SetId(reader.GetInt64("id"));
             cb.SetName(reader.GetString("name"));
-            cb.SetName(reader.GetString("name"));
+            cb.SetCustomerType((CustomerType)reader.GetInt16("customer_type_id"));
             cb.SetSurname(reader.GetString("surname"));
             cb.SetEmail(reader.GetString("email"));
             cb.SetPhoneNumber(reader.GetString("phone_number"));
@@ -300,7 +509,7 @@ namespace noslq_pr.DAO.MYSQL
             using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
             {
                 con.Open();
-                using (var transaction = con.BeginTransaction(IsolationLevel.ReadCommitted))
+                using (var transaction = con.BeginTransaction(System.Data.IsolationLevel.ReadCommitted))
                 {
 
                     try
@@ -387,6 +596,11 @@ namespace noslq_pr.DAO.MYSQL
             foreach(var observer in _observers) {
                 observer.Update(operation,criteria,result);
             }
+        }
+
+        public List<Customer> GetAllCustomers(int limit)
+        {
+            throw new NotImplementedException();
         }
     }
 }

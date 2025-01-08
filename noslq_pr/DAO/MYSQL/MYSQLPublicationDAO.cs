@@ -8,6 +8,7 @@ using MySqlConnector;
 using System.Data;
 using noslq_pr.Builder;
 using noslq_pr.Observer;
+using MongoDB.Driver;
 
 namespace noslq_pr.DAO.MYSQL
 {
@@ -19,7 +20,7 @@ namespace noslq_pr.DAO.MYSQL
         private const string getFull = "SELECT Id, title, page_count, circulation, genre_id, price FROM publication WHERE id = @id";
         private const string getFullByTitle = "SELECT Id, title, page_count, circulation, genre_id, price FROM publication WHERE title = @title";
         private const string getPublByAuthor = "select  p.Id, p.title, p.page_count, p.circulation, p.genre_id, p.price\r\nfrom publication_author pa\r\njoin publication p on pa.publications_id  = p.id\r\nwhere pa.author_id = @id;";
-        private const string getPublByOrder = "select  p.Id, p.title, p.page_count, p.circulation, p.genre_id, p.price\r\nfrom order_publication op\r\njoin publication p on op.punlication  = p.id\r\nwhere op.order = 1;";
+        private const string getPublByOrder = "select  p.Id, p.title, p.page_count, p.circulation, p.genre_id, p.price\r\nfrom order_publication op\r\njoin publication p on op.punlication  = p.id\r\nwhere op.order = @id;";
         private const string getPublByCustomer = "select  p.Id, p.title, p.page_count, p.circulation, p.genre_id, p.price\r\nfrom `order` o\r\njoin order_publication op  on o.id = op.order\r\njoin publication p on op.punlication  = p.id\r\nwhere o.customer = @id;";
         private const string getAuthors = "select  p.id, p.name,p.surname, p.email, p.phone_number, a.pseudonym,\r\np.address_book_address_id,ad.country, ad.city, ad.street,ad.house,ad.apartment \r\nfrom publication_author pa\r\njoin author a on pa.author_ID  = a.id\r\njoin person p on p.id = a.id\r\njoin  address_book ad  ON p.address_book_address_id = ad.address_id\r\nwhere pa.publications_id = @id;";
         private const string findAuthor = "select p.id from author a join person p on p.id = a.id where p.name = @name and p.surname=@surname;";
@@ -28,8 +29,8 @@ namespace noslq_pr.DAO.MYSQL
         //private const string insertAuthor = "insert into author (id, pseudonym) values(@id, @pseudonym)";
 
         private const string insertAuthorsToPubl = "insert into publication_author(author_ID,publications_id) values(@author_ID, @publications_id);";
-       
-       //private const string insertAddress = "insert into address_book (address_id, country, city, street, house,apartment) values(@address_id, @country, @city, @street, @house,@appartment)";
+
+        //private const string insertAddress = "insert into address_book (address_id, country, city, street, house,apartment) values(@address_id, @country, @city, @street, @house,@appartment)";
         private readonly MySQLAuthorDAO authorDAO;
 
 
@@ -45,13 +46,14 @@ namespace noslq_pr.DAO.MYSQL
 
 
 
-        public void AddPublication(Publication p, MySqlTransaction transaction, MySqlConnection con,StringBuilder result)
+        public void AddPublication(Publication p, MySqlTransaction transaction, MySqlConnection con, StringBuilder result)
         {
-            
+
             p.Id = GetLastId(con, transaction) + 1;
             using (var c = new MySqlCommand(insert, con))
             {
                 c.Transaction = transaction;
+              
                 c.Parameters.AddWithValue("@id", p.Id);
                 c.Parameters.AddWithValue("@title", p.Title);
                 c.Parameters.AddWithValue("@pageCount", p.PageCount);
@@ -76,10 +78,10 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         if (reader.HasRows)
                         {
-                            while (reader.Read()) 
+                            while (reader.Read())
                             {
                                 a.Id = reader.GetInt32("id");
-                                Console.WriteLine(a);
+                                //Console.WriteLine(a);
                             }
                         }
 
@@ -91,7 +93,7 @@ namespace noslq_pr.DAO.MYSQL
                 if (a.Id == 0)
                 {
                     authorDAO.AddAuthor(a, transaction, con, result);
-                
+
                 }
 
             }
@@ -128,7 +130,7 @@ namespace noslq_pr.DAO.MYSQL
                     try
                     {
 
-                        AddPublication(p, transaction, con,result);
+                        AddPublication(p, transaction, con, result);
 
                         transaction.Commit();
                     }
@@ -136,11 +138,11 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.Error.WriteLine(e.Message);
-                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
-                            p, e.Message);
+                        //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                            //p, e.Message);
                     }
-                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
-                            p, result.ToString());
+                    //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                           // p, result.ToString());
                 }
             }
         }
@@ -148,76 +150,85 @@ namespace noslq_pr.DAO.MYSQL
 
 
 
-        public Publication GetPublication(int id)
+        public Publication GetPublication(object objectId)
         {
             if (authorDAO == null)
             {
                 throw new Exception("Author dao is null");
             }
-            PublicationBuilder p = new PublicationBuilder();
-            try
+            if (objectId is long id)
             {
-                using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
+                PublicationBuilder p = new PublicationBuilder();
+                try
                 {
-                    con.Open();
-
-
-                    using (var cmd = new MySqlCommand(getFull, con))
+                    using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
                     {
-                        cmd.Parameters.AddWithValue("@id", id);
+                        con.Open();
 
-                        using (var reader = cmd.ExecuteReader())
+
+                        using (var cmd = new MySqlCommand(getFull, con))
                         {
+                            cmd.Parameters.AddWithValue("@id", id);
 
-                            if (!reader.HasRows)
+                            using (var reader = cmd.ExecuteReader())
                             {
-                                throw new Exception("No data found for the query.");
+
+                                if (!reader.HasRows)
+                                {
+                                    throw new Exception("No data found for the query.");
+
+                                }
+                                while (reader.Read())
+                                {
+                                    p = MapPublication(reader);
+                                }
 
                             }
-                            while (reader.Read())
-                            {
-                                p = MapPublication(reader);
-                            }
-
                         }
-                    }
 
-                    using (var cmd = new MySqlCommand(getAuthors, con))
-                    {
-                        cmd.Parameters.AddWithValue("@id", p.Id);
-
-
-                        using (var reader = cmd.ExecuteReader())
+                        using (var cmd = new MySqlCommand(getAuthors, con))
                         {
+                            cmd.Parameters.AddWithValue("@id", p.Id);
 
-                            if (!reader.HasRows)
-                            {
-                                throw new Exception("No data found for the query.");
 
-                            }
-                            while (reader.Read())
+                            using (var reader = cmd.ExecuteReader())
                             {
 
-                              
-                                p.Authors.Add(authorDAO.MapAuthor(reader).Build());
+                                if (!reader.HasRows)
+                                {
+                                    throw new Exception("No data found for the query.");
+
+                                }
+                                while (reader.Read())
+                                {
+
+
+                                    p.Authors.Add(authorDAO.MapAuthor(reader).Build());
+
+                                }
 
                             }
-
                         }
+
+
+
                     }
-                        
-
-
                 }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                }
+
+                return p.Build();
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-            }
-            return p.Build();
+            throw new Exception("Wrong id type");
         }
 
-    
+
+
+        
+
+
 
         public List<Publication> GetPublicationByAuthorId(int authorId)
         {
@@ -355,6 +366,74 @@ namespace noslq_pr.DAO.MYSQL
 
 
                 }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            return p;
+        }
+
+
+
+        
+
+        public List<Publication> GetPublicationByOrderId(MySqlConnection con, long orderId)
+        {
+           
+            List<Publication> p = new List<Publication>();
+            try
+            {
+
+                using (var cmd = new MySqlCommand(getPublByOrder, con))
+                {
+                    cmd.Parameters.AddWithValue("@id", orderId);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+
+                        if (!reader.HasRows)
+                        {
+                            throw new Exception("No data found for the query.");
+
+                        }
+                        while (reader.Read())
+                        {
+                            p.Add(MapPublication(reader).Build());
+                        }
+
+                    }
+                }
+                foreach (var publ in p)
+                {
+                    using (var cmd = new MySqlCommand(getAuthors, con))
+                    {
+                        cmd.Parameters.AddWithValue("@id", publ.Id);
+
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+
+                            if (!reader.HasRows)
+                            {
+                                throw new Exception("No data found for the query.");
+
+                            }
+                            while (reader.Read())
+                            {
+
+
+                                publ.Authors.Add(authorDAO.MapAuthor(reader).Build());
+
+                            }
+
+                        }
+                    }
+                }
+
+
+
+
             }
             catch (Exception e)
             {
@@ -516,6 +595,7 @@ namespace noslq_pr.DAO.MYSQL
             p.SetCirculation(reader.GetInt32("circulation"));
             p.SetGenre((Genre)reader.GetInt32("genre_id"));
             p.SetPrice( reader.GetDecimal("price"));
+            p.SetPrintQuality(PrintQuality.Medium);
             return p;
         }
 
@@ -584,19 +664,19 @@ namespace noslq_pr.DAO.MYSQL
 
         public void Attach(IObserver observer)
         {
-            Console.WriteLine($"Attached observer {observer.GetType()} to MySQLPublicationDAO");
+            //Console.WriteLine($"Attached observer {observer.GetType()} to MySQLPublicationDAO");
             _observers.Add(observer);
         }
 
         public void Detach(IObserver observer)
         {
-            Console.WriteLine($"Detached observer {observer.GetType()} from MySQLPublicationDAO");
+            //Console.WriteLine($"Detached observer {observer.GetType()} from MySQLPublicationDAO");
             _observers.Add(observer);
         }
 
         public void Notify(string operation, object criteria, object result)
         {
-            Console.WriteLine($"Notified observers of MySQLPublicationDAO");
+            //Console.WriteLine($"Notified observers of MySQLPublicationDAO");
             foreach (var obs in _observers)
             {
                 obs.Update(operation, criteria, result);

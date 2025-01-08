@@ -1,4 +1,5 @@
-﻿using noslq_pr.Entities;
+﻿using MongoDB.Bson;
+using noslq_pr.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,7 @@ namespace noslq_pr.Builder
     public class PrintingHouseBuilder
     {
         public long Id { get; private set; }
+        public ObjectId ObjectId { get; private set; }
         public string Name { get; private set; }
         public string PhoneNumber { get; private set; }
         public Address Address { get; private set; }
@@ -22,6 +24,12 @@ namespace noslq_pr.Builder
         public PrintingHouseBuilder SetId(long id)
         {
             Id = id;
+            return this;
+        }
+
+        public PrintingHouseBuilder SetObjectId(ObjectId objectId)
+        {
+            ObjectId = objectId;
             return this;
         }
 

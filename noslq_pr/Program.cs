@@ -1,11 +1,17 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Driver.Core.Configuration;
+using MongoDB.Driver;
 using noslq_pr.Builder;
 using noslq_pr.DAO;
 using noslq_pr.DAO.MYSQL;
 using noslq_pr.Entities;
 using noslq_pr.FakeDataGenerators;
 using noslq_pr.Observer;
+using MongoDB.Bson;
+using System.Diagnostics;
+using static Bogus.DataSets.Name;
+using noslq_pr.DAO.Migration;
 
 namespace noslq_pr
 {
@@ -15,14 +21,119 @@ namespace noslq_pr
         {
             try
             {
+
+                
+                //ConnectionService.SetUpMySQLConnection();
+
+                DAOConfig config = DAOConfig.GetDAOConfig();
                 DAOFactory factory = DAOFactory.Instance;
+                //AuthorMigrationService authorMigrationService = new AuthorMigrationService(factory);
+                //authorMigrationService.Migration(DataBaseType.MySQL,DataBaseType.MongoDB);
+                //CustomerMigrationService customerMigrationService = new CustomerMigrationService(factory);
+                //customerMigrationService.Migration(DataBaseType.MySQL, DataBaseType.MongoDB);
+                /*IFakeDataGenerator<PrintingHouse> gPubl = new PrintingHouseDataGenerator();
+                ConnectionService.EstablishConnection(DataBaseType.MySQL);
+                IPrintingHouseDAO PrintingHouseDAO = factory.GetPrintingHouseDAO();
+                if (PrintingHouseDAO == null) throw new Exception("PrintingHouse DAO is null");
+                List<PrintingHouse> houses = new List<PrintingHouse>(100);
+                for (int i = 0; i < 100; i++)
+                {
+                    houses.Add(gPubl.GetFakeData());
+                }
+                PrintingHouseDAO.AddPrintingHouses(houses);*/
+
+
+                //PrintingHouseMigrationService printingHouseMigrationService = new PrintingHouseMigrationService(factory);
+                //printingHouseMigrationService.Migration(DataBaseType.MongoDB, DataBaseType.MySQL);
+                /*ConnectionService.EstablishConnection(DataBaseType.MySQL);
+                IFakeDataGenerator<PrintingHouse> genPrint = new PrintingHouseDataGenerator();
+                IFakeDataGenerator<Customer> genCustomer = new CustomerDataGenerator();
+                IFakeDataGenerator<OrderBuilder> genOrder = new OrderDataGenerator();
+                IOrderDAO orderDAO = factory.GetOrderDAO();
+                if (orderDAO == null) throw new Exception("PrintingHouse DAO is null");
+                List<Order> orders = new List<Order>();
+                for (int i = 0; i < 10; i++)
+                {
+                    var order = genOrder.GetFakeData().
+                        SetCustomer(genCustomer.GetFakeData()).SetPrintingHouse(genPrint.GetFakeData());
+                    orders.Add(order.Build());
+                }
+                orderDAO.AddOrders(orders);*/
+
+                OrderMigrationService orderMigrationService =  new OrderMigrationService(factory);
+                orderMigrationService.Migration(DataBaseType.MongoDB, DataBaseType.MySQL);
+                /*IFakeDataGenerator<Author> generator = new AuthorDataGenerator();
+                Author test1 = generator.GetFakeData();
+
+                IAuthorDAO authorDAO = factory.GetAuthorDAO();
+                if (authorDAO == null) throw new Exception("Author DAO is null");
+                authorDAO.AddAuthor(test1);
+                Author test2 = authorDAO.GetAuthorByName("Christy", "Heidenreich");
+                Console.WriteLine(test2);
+                //
+                Author test = generator.GetFakeData();
+                authorDAO.UpdateAuthor(new AuthorBuilder().SetObjectId(new MongoDB.Bson.ObjectId("674ce6c9ce59de7c4e3c1a33")).
+                    SetSurname(test.Surname)
+                    .SetCountry(test.Address.Country).SetPhoneNumber(test.PhoneNumber).Build());*/
+
+                /*IFakeDataGenerator<Publication> gPubl = new PublicationDataGenerator();
+                Publication publ1 = gPubl.GetFakeData();
+
+                IPublicationDAO publicationDAO =factory.GetPublicationDAO();
+                if (publicationDAO == null) throw new Exception("PublicationDAO is null");
+                publicationDAO.AddPublication(publ1);
+                Publication p = publicationDAO.GetPublication(publ1.ObjectId);
+                Console.WriteLine(p);*/
+
+
+               
+
+                /*ICustomerDAO CustomerDAO = factory.GetCustomerDAO();
+                if (CustomerDAO == null) throw new Exception("Customer DAO is null");
+               
+              
+
+
+                IFakeDataGenerator<PrintingHouse> genPrint = new PrintingHouseDataGenerator();
+                IFakeDataGenerator<Customer> genCustomer = new CustomerDataGenerator();
+                IFakeDataGenerator<OrderBuilder> genOrder = new OrderDataGenerator();
+
+                
+                IPrintingHouseDAO PrintingHouseDAO = factory.GetPrintingHouseDAO();
+                if (PrintingHouseDAO == null) throw new Exception("PrintingHouse DAO is null");
+                var OrderDAO = factory.GetOrderDAO();
+                if (OrderDAO == null) throw new Exception("OrderDAO is null");
+
+                IPublicationDAO publicationDAO = factory.GetPublicationDAO();
+                if (publicationDAO == null) throw new Exception("Publication DAO is null");
+
+                Console.WriteLine(CustomerDAO.GetCustomer(2));
+                //OrderBuilder ob = genOrder.GetFakeData();
+                //ob.SetCustomer(CustomerDAO.GetCustomerByName("Madison", "Monahan"))
+                //.SetPrintingHouse(PrintingHouseDAO.GetPrintingHouseByName("White - Moen"));
+                //Experiments(CustomerDAO);
+                //ExperimentsSelect(CustomerDAO);
+                //OrderDAO.AddOrder(ob.Build());
+                //Console.WriteLine( string.Join("\n\n",OrderDAO.GetAllOrder().Select(x=>x.ToString())));
+                /*IPrintingHouseDAO PrintingHouseDAO = factory.GetPrintingHouseDAO();
+                if (PrintingHouseDAO == null) throw new Exception("PrintingHouse DAO is null");
+                for (int i = 0; i < 40; i++)
+                {
+                    //PrintingHouseDAO.AddPrintingHouse(generator.GetFakeData());
+                }
+                List<PrintingHouse> test2 = PrintingHouseDAO.GetPrintingHouseByCountry("Serbia");
+                Console.WriteLine(string.Join("\n\n", test2.Select(e=>e.ToString())));*/
+                //
+                //PrintingHouse test = generator.GetFakeData();
+                //PrintingHouseDAO.UpdatePrintingHouse(new PrintingHouseBuilder().SetObjectId(test2.ObjectId)
+                //.SetCountry(test.Address.Country).SetPhoneNumber(test.PhoneNumber).Build());
 
                 //InsertMethods(factory);
                 //Console.WriteLine("All information inserted without exceptions");
                 //GetMethods(factory);
                 //UpdateMethods(factory);
                 //FakerTest();
-                ObserverTest(factory);
+                //ObserverTest(factory);
             }
             catch (Exception ex)
             {
@@ -30,7 +141,123 @@ namespace noslq_pr
             }
         }
 
-     
+
+        private static void Experiments(ICustomerDAO customerDAO  )
+        {
+            var recordCounts = new[] { 100, 1000, 10000, 50000, 100000, 500000 };
+            var results = new List<string>();
+
+            /*IFakeDataGenerator<PrintingHouse> genPrint = new PrintingHouseDataGenerator();
+            IFakeDataGenerator<Customer> genCustomer = new CustomerDataGenerator();
+            IFakeDataGenerator<OrderBuilder> genOrder = new OrderDataGenerator();
+            IFakeDataGenerator<Publication> publicationGen = new PublicationDataGenerator();
+            List<Customer> customers = new List<Customer>();
+            List<PrintingHouse> printingHouses = new List<PrintingHouse>();
+            Random random = new Random();
+           
+                for (int i = 0; i < 100; i++)
+                {
+                    var c = genCustomer.GetFakeData();
+                    customerDAO.AddCustomer(c);
+                    customers.Add(c);
+
+                    var pr = genPrint.GetFakeData();
+                    prHouseDAO.AddPrintingHouse(pr);
+                    printingHouses.Add(pr);
+                }*/
+            //IFakeDataGenerator<Publication> publicationGen = new PublicationDataGenerator();
+            IFakeDataGenerator<Customer> genCustomer = new CustomerDataGenerator();
+            foreach (var count in recordCounts)
+            {
+                Console.WriteLine($"Testing with {count} records...");
+                var stopwatch = Stopwatch.StartNew();
+                for (int i = 0; i < count; i++)
+                {
+                    customerDAO.AddCustomer(genCustomer.GetFakeData());
+                }
+                stopwatch.Stop();
+                var elapsedTime = stopwatch.ElapsedMilliseconds;
+
+                Console.WriteLine($"Insert {count} records: {elapsedTime} ms");
+
+                 //Збережіть результат у список
+                results.Add($"{count},{elapsedTime}");
+            }
+
+           string filePath = "D:\\projects\\C#\\nosql_3\\performance_results_write_mysql_index.csv";
+            using (var writer = new StreamWriter(filePath))
+            {
+                writer.WriteLine("RecordCount,ElapsedTime(ms)");
+                foreach (var result in results)
+                {
+                    writer.WriteLine(result);
+                }
+            }
+
+            Console.WriteLine($"Results saved to {filePath}");
+
+        }
+
+        private static void ExperimentsSelect(ICustomerDAO customerDAO)
+        {
+
+
+
+            Stopwatch stopwatch = new Stopwatch();
+ 
+                stopwatch.Start();  // Start stopwatch
+
+
+                var c = customerDAO.GetCustomerByName("Modesto", "Rowe");
+                stopwatch.Stop();   // Stop stopwatch
+                double elapsedTime = stopwatch.Elapsed.TotalMilliseconds;  // Get elapsed time
+                Console.WriteLine(elapsedTime);  // Output elapsed time
+            //Console.WriteLine(c);
+            
+        }
+        static void Delete(DAOConfig daoConfig)
+        {
+            var client = new MongoClient(daoConfig.Url);
+            var database = client.GetDatabase(daoConfig.Database);
+
+            var collection = database.GetCollection<BsonDocument>(daoConfig.Database);
+
+            const int batchSize = 5000; // Number of records to delete in each batch
+            long totalRecordsToDelete = 500000;
+            long skipped = 0;
+
+            while (skipped < totalRecordsToDelete)
+            {
+                var filter = Builders<BsonDocument>.Filter.Empty; // Select all records
+               
+                var result = collection.DeleteMany(filter, new DeleteOptions
+                {
+                    
+                });
+
+                Console.WriteLine($"Deleted {result.DeletedCount} records in batch starting from index {skipped}");
+                skipped += batchSize;
+            }
+
+            Console.WriteLine("Deletion completed.");
+
+        }
+
+        //string filePath = "D:\\projects\\C#\\nosql_3\\performance_results_rea_mongodb.csv";
+        /* using (var writer = new StreamWriter(filePath))
+         {
+             writer.WriteLine("RecordCount,ElapsedTime(ms)");
+             foreach (var result in results)
+             {
+                 writer.WriteLine(result);
+             }
+         }
+
+         Console.WriteLine($"Results saved to {filePath}");*/
+
+
+
+
         private static void ObserverTest(DAOFactory factory)
         {
             try
@@ -409,7 +636,8 @@ namespace noslq_pr
             OrderDAO.AddOrder(order1);
         }
     }
-
 }
+
+
 
 

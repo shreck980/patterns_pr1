@@ -25,7 +25,7 @@ namespace noslq_pr.FakeDataGenerators
         public Publication GetFakeData()
         {
             faker = new Faker<PublicationBuilder>()
-            .RuleFor(p => p.Title, f => f.Lorem.Sentence(3, 5))
+            .RuleFor(p => p.Title, f => f.Commerce.ProductName())
             .RuleFor(p => p.PageCount, f => f.Random.Int(50, 1000))
             .RuleFor(p => p.Circulation, f => f.Random.Int(1000, 50000))
             .RuleFor(p => p.Price, f => f.Finance.Amount(400, 1000))

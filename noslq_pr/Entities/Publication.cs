@@ -1,4 +1,6 @@
-﻿using noslq_pr.Builder;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using noslq_pr.Builder;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -10,19 +12,26 @@ namespace noslq_pr.Entities
 {
     public class Publication
     {
+        [BsonIgnore]
         public long Id { get; set; }
+        [BsonId]
+        public ObjectId ObjectId { get; set; }
         public string Title { get; set; }
         public int PageCount { get; set; }
         public int Circulation { get; set; }
         public decimal Price { get; set; }
-        public List<Author> Authors{ get; set; }    
+        [BsonIgnore]
+        public List<Author> Authors{ get; set; }
+        [BsonRepresentation(BsonType.String)]
         public Genre Genre { get; set; }
+        [BsonRepresentation(BsonType.String)]
         public PrintQuality PrintQuality { get; set; }
         public int Quantity { get; set; }
       
         public Publication(PublicationBuilder pb) {
            
             Id = pb.Id;
+            ObjectId = pb.ObjectId;
             Title = pb.Title;
             PageCount = pb.PageCount;
             Circulation = pb.Circulation;
@@ -37,7 +46,7 @@ namespace noslq_pr.Entities
         {
            
             string authorsList = Authors != null && Authors.Count > 0
-                ? string.Join("\n\n", Authors.Select(a=>a.ToString()))
+                ? string.Join("\n", Authors.Select(a=>$"{a.Name} {a.Surname}"))
                 : "No Authors";
 
             return $"Id: {Id} \nTitle: {Title}, \nPageCount: {PageCount}, \nCirculation: {Circulation}, Price: {Price}$, " +

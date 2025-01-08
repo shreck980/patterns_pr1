@@ -12,10 +12,12 @@ namespace noslq_pr.DAO
     {
 
         void AddAuthor(Author p);
+        void AddAuthors(List<Author> list);
        
-        Author GetAuthor(int id);
+        Author GetAuthor(Object id);
         Author GetAuthorByName(string name,string surname);
         List<Author> GetAuthorByPublicationId(long publId);
+        List<Author> GetAllAuthors();
         void AddAuthorsToPublication(Publication p);
         void UpdateAuthor(Author a);
 

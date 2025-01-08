@@ -1,4 +1,6 @@
-﻿using noslq_pr.Entities;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using noslq_pr.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,11 +11,16 @@ namespace noslq_pr.Builder
 {
     public class OrderBuilder
     {
+        [BsonIgnore]
         public long Id { get; private set; }
+        [BsonId]
+        public ObjectId ObjectId { get; private set; }
         public DateTime AcceptanceDate { get; private set; }
+        [BsonIgnore]
         public PrintingHouse PrintingHouse { get; private set; }
         public decimal Price { get; private set; }
         public List<Publication> Publications { get; private set; }
+        [BsonIgnore]
         public Customer Customer { get; private set; }
         public OrderStatus Status { get; private set; }
         public OrderBuilder()
@@ -30,6 +37,12 @@ namespace noslq_pr.Builder
         public OrderBuilder SetId(long id)
         {
             Id = id;
+            return this;
+        }
+
+        public OrderBuilder SetObjectId(ObjectId id)
+        {
+            ObjectId = id;
             return this;
         }
 
@@ -58,6 +71,7 @@ namespace noslq_pr.Builder
             Publications.Add(p);
             return this;
         }
+        
 
         public OrderBuilder SetCustomer(Customer Customer)
         {

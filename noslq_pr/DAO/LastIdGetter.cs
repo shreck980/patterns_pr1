@@ -17,6 +17,7 @@ namespace noslq_pr.DAO
             using (MySqlCommand command = new MySqlCommand(GetLastID, connection))
             {
                 command.Transaction = transaction;
+                
                 var result = command.ExecuteScalar();
                 if (result != null && result != DBNull.Value)
                 {

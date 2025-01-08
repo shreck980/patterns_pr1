@@ -10,7 +10,7 @@ namespace noslq_pr.DAO
 {
     public class DAOConfig
     {
-        private static DAOConfig _daoConfig; 
+        private static DAOConfig _daoConfig;
         public string Server { get; set; }
         public string Port { get; set; }
         public string User { get; set; }
@@ -27,57 +27,100 @@ namespace noslq_pr.DAO
 
         public static DAOConfig GetDAOConfig()
         {
-            if(_daoConfig == null)
+            if (_daoConfig == null)
             {
-                _daoConfig= new DAOConfig();
-                
+                _daoConfig = new DAOConfig();
+               
             }
-
+            _daoConfig.InitConfig();
             return _daoConfig;
         }
 
 
+
+
         private void InitConfig()
         {
-            var databaseConfig = new ConfigurationBuilder().AddJsonFile("D:\\C#\\noslq_pr\\noslq_pr\\appsettings.json").Build().GetSection("ConnectionStrings");
-            var _server = databaseConfig["Server"];
-            if (_server != null)
+            var databaseConfig = new ConfigurationBuilder().AddJsonFile("D:\\projects\\C#\\nosql_3\\noslq_pr\\appsettings.json").Build().GetSection("ConnectionStrings");
+            if (databaseConfig["DatabaseType"] == DataBaseType.MySQL.ToString()) {
+                var _server = databaseConfig["Server"];
+                if (_server != null)
+                {
+                    Server = _server;
+                }
+                var _port = databaseConfig["Port"];
+                if (_port != null)
+                {
+                    Port = _port;
+                }
+
+                var _user = databaseConfig["User"];
+                if (_user != null)
+                {
+                    User = _user;
+                }
+                var _password = databaseConfig["Password"];
+
+                if (_password != null)
+                {
+                    Password = _password;
+                }
+
+                var _database = databaseConfig["Database"];
+
+                if (_database != null)
+                {
+                    Database = _database;
+                }
+
+                var _databaseType = databaseConfig["DatabaseType"];
+
+                if (_databaseType != null)
+                {
+                    DatabaseType = _databaseType;
+                }
+
+                Url = $"Server={Server};Port={Port};User ID={User};Password={Password};Database={Database}";
+            }else if(databaseConfig["DatabaseType"] == DataBaseType.MongoDB.ToString())
             {
-                Server = _server;
+
+                var _server = databaseConfig["Server"];
+                if (_server != null)
+                {
+                    Server = _server;
+                }
+                var _port = databaseConfig["Port"];
+                if (_port != null)
+                {
+                    Port = _port;
+                }
+
+                var _database = databaseConfig["Database"];
+
+                if (_database != null)
+                {
+                    Database = _database;
+                }
+
+
+                var _databaseType = databaseConfig["DatabaseType"];
+
+                if (_databaseType != null)
+                {
+                    DatabaseType = _databaseType;
+                }
+               
+                Url = $"mongodb://{Server}:{Port}";
             }
-            var _port = databaseConfig["Port"];
-            if (_port != null)
-            {
-                Port = _port;
-            }
-
-            var _user = databaseConfig["User"];
-            if (_user != null)
-            {
-                User = _user;
-            }
-            var _password = databaseConfig["Password"];
-
-            if (_password != null)
-            {
-                Password = _password;
-            }
-
-            var _database = databaseConfig["Database"];
-
-            if (_database != null)
-            {
-                Database = _database;
-            }
-
-            var _databaseType = databaseConfig["DatabaseType"];
-
-            if (_databaseType != null)
-            {
-                DatabaseType = _databaseType;
-            }
-
-            Url = $"Server={Server};Port={Port};User ID={User};Password={Password};Database={Database}";
         }
+
+    }
+
+    public enum DataBaseType
+    {
+
+        MySQL,
+        MongoDB
+        
     }
 }

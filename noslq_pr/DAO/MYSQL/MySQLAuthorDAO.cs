@@ -29,6 +29,7 @@ namespace noslq_pr.DAO.MYSQL
 
         private const string insertAuthorsToPubl = "insert into publication_author(author_ID,publications_id) values(@author_ID, @publications_id);";
         private const string getAuthortByPubl = "select  p.id, p.name,p.surname, p.email, p.phone_number, a.pseudonym,\r\np.address_book_address_id,ad.country, ad.city, ad.street,ad.house,ad.apartment \r\nfrom publication_author pa\r\njoin author a on pa.author_ID  = a.id\r\njoin person p on p.id = a.id\r\njoin  address_book ad  ON p.address_book_address_id = ad.address_id\r\nwhere pa.publications_id = @id;";
+        private const string getAllAuthors = "SELECT p.id, p.name,p.surname, p.email, p.phone_number, c.pseudonym,\r\np.address_book_address_id,ad.country, ad.city, ad.street,ad.house,ad.apartment\r\nFROM author c\r\njoin person p on c.id = p.id\r\njoin  address_book ad  ON p.address_book_address_id = ad.address_id;";
 
 
         private List<IObserver> _observers = new List<IObserver> ();
@@ -123,42 +124,77 @@ namespace noslq_pr.DAO.MYSQL
             }
         }
 
-        public Author GetAuthor(int id)
-        {
-            AuthorBuilder p = new AuthorBuilder();
+
+       public void AddAuthors(List<Author> list)
+       {
+            StringBuilder result = new StringBuilder();
             using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
             {
                 con.Open();
-
-
-                using (var cmd = new MySqlCommand(getFull, con))
+                using (var transaction = con.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
-                    cmd.Parameters.AddWithValue("@id", id);
+
                     try
                     {
-                        using (var reader = cmd.ExecuteReader())
-                        {
-
-                            if (!reader.HasRows)
-                            {
-                                throw new Exception("No data found for the query.");
-
-                            }
-                            while (reader.Read())
-                            {
-                                p = MapAuthor(reader);
-
-                            }
-
+                        foreach(var author in list) {
+                            AddAuthor(author, transaction, con, result);
                         }
+
+                        transaction.Commit();
                     }
-                    catch (Exception e)
+                    catch (MySqlException e)
                     {
-                        Console.WriteLine(e.ToString());
+                        transaction.Rollback();
+                        Console.Error.WriteLine(e.StackTrace);
+                       
                     }
-                    return p.Build();
+
+                    
                 }
             }
+        }
+
+        public Author GetAuthor(Object objectId)
+        {
+            if (objectId is long id )
+            {
+                
+                AuthorBuilder p = new AuthorBuilder();
+                using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
+                {
+                    con.Open();
+
+
+                    using (var cmd = new MySqlCommand(getFull, con))
+                    {
+                        cmd.Parameters.AddWithValue("@id", id);
+                        try
+                        {
+                            using (var reader = cmd.ExecuteReader())
+                            {
+
+                                if (!reader.HasRows)
+                                {
+                                    throw new Exception("No data found for the query.");
+
+                                }
+                                while (reader.Read())
+                                {
+                                    p = MapAuthor(reader);
+
+                                }
+
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e.ToString());
+                        }
+                        return p.Build();
+                    }
+                }
+            }
+            throw new Exception("Id value wrong type");
 
         }
 
@@ -278,13 +314,51 @@ namespace noslq_pr.DAO.MYSQL
             }
         }
 
+        public List<Author> GetAllAuthors()
+        {
+            List<Author> p = new List<Author>();
+            using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
+            {
+                con.Open();
+
+
+                using (var cmd = new MySqlCommand(getAllAuthors, con))
+                {
+                    
+
+                    try
+                    {
+                        using (var reader = cmd.ExecuteReader())
+                        {
+
+                            if (!reader.HasRows)
+                            {
+                                throw new Exception("No data found for the query.");
+
+                            }
+                            while (reader.Read())
+                            {
+                                p.Add(MapAuthor(reader).Build());
+
+                            }
+
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.ToString());
+                    }
+                    return p;
+                }
+            }
+        }
 
         public AuthorBuilder MapAuthor(MySqlDataReader reader)
         {
             AuthorBuilder cb =new AuthorBuilder();
             cb.SetId(reader.GetInt64("id"));
             cb.SetName(reader.GetString("name"));
-            cb.SetName(reader.GetString("name"));
+            cb.SetPseudonym(reader.GetString("pseudonym"));
             cb.SetSurname(reader.GetString("surname"));
             cb.SetEmail(reader.GetString("email"));
             cb.SetPhoneNumber(reader.GetString("phone_number"));
@@ -437,6 +511,8 @@ namespace noslq_pr.DAO.MYSQL
                 obs.Update(operation, criteria, result);
             }
         }
+
+        
     }
 }
 

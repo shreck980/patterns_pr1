@@ -16,6 +16,7 @@ namespace noslq_pr.Entities
         public Author(AuthorBuilder AuthorBuilder) 
         {
             Id = AuthorBuilder.Id;
+            ObjectId = AuthorBuilder.ObjectId;
             Name = AuthorBuilder.Name;
             Surname = AuthorBuilder.Surname;
             Email = AuthorBuilder.Email;

@@ -1,4 +1,5 @@
-﻿using noslq_pr.Entities;
+﻿using MongoDB.Bson;
+using noslq_pr.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,7 @@ namespace noslq_pr.Builder
     public abstract class PersonBuilder<T> where T :  PersonBuilder<T>, new()
     {
         public long Id { get; protected set; }
+        public ObjectId ObjectId { get; protected set; }
         public string Name { get; protected set; }
         public string Surname { get; protected set; }
 
@@ -20,6 +22,11 @@ namespace noslq_pr.Builder
         public T SetId(long id)
         {
             Id = id;
+            return (T)this;
+        }
+        public T SetObjectId(ObjectId id)
+        {
+            ObjectId = id;
             return (T)this;
         }
 
@@ -49,6 +56,11 @@ namespace noslq_pr.Builder
         public T SetAddressId(long AddressId)
         {
             Address.Id = AddressId;
+            return (T)this;
+        }
+        public T SetAddressObjectId(ObjectId id)
+        {
+            Address.ObjectId = id;
             return (T)this;
         }
 

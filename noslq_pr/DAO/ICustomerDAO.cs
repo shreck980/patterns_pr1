@@ -11,9 +11,12 @@ namespace noslq_pr.DAO
     public interface ICustomerDAO : ISubject
     {
         void AddCustomer(Customer p);
-        Customer GetCustomer(int id);
+        void AddCustomers(List<Customer> list);
+        Customer GetCustomer(object id);
+        List<Customer> GetAllCustomers();
         Customer GetCustomerByName(string name,string surname);
         List<Customer> GetCustomerByCountry(string country);
+        List<Customer> GetAllCustomers(int limit);
         void UpdateCustomer(Customer a);
     }
 }

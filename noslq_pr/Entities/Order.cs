@@ -1,4 +1,6 @@
-﻿using noslq_pr.Builder;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using noslq_pr.Builder;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,11 +11,16 @@ namespace noslq_pr.Entities
 {
     public class Order
     {
+        [BsonIgnore]
         public long Id { get; set; }
+        [BsonId]
+        public ObjectId ObjectId { get; set; }
         public DateTime AcceptanceDate { get; set; }
+        [BsonIgnore]
         public PrintingHouse PrintingHouse { get; set; }
         public decimal Price { get; set; }
         public List<Publication> Publications { get; set; }
+        [BsonIgnore]
         public Customer Customer { get; set; }
         public OrderStatus Status { get; set; }
         public Order(OrderBuilder builder) {
@@ -36,7 +43,7 @@ namespace noslq_pr.Entities
 
             return $"Order ID: {Id}, Acceptance Date: {AcceptanceDate}, " +
                    $"Price: {Price:C}, Status: {Status}, " +
-                   $"Customer: {Customer?.Id}, PrintingHouse: {PrintingHouse?.Id}, Publications: {publicationDetails}";
+                   $"Customer: {Customer?.Email}, PrintingHouse: {PrintingHouse?.Name}, Publications: {publicationDetails}";
         }
     }
 

@@ -12,11 +12,13 @@ namespace noslq_pr.DAO
     {
 
         void AddOrder(Order o);
+        void AddOrders(List<Order> list);
         void UpdateOrder(Order o);
         void UpdateOrderPublication(Order o);
-        Order GetOrder(long id);
+        Order GetOrder(object ObjectId);
+        List<Order> GetAllOrder();
         List<Order> GetOrderbyDate(DateTime date);
-        List<Order> GetOrderbyCustomer(long custoemrId);
+        List<Order> GetOrderbyCustomer(string email);
         List<Order> GetOrderbyStatus(OrderStatus status);
     }
 }

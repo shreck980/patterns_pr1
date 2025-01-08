@@ -11,7 +11,7 @@ namespace noslq_pr.DAO
     public interface IPublicationDAO :ISubject
     {
         void AddPublication(Publication p);
-        Publication GetPublication(int id);
+        Publication GetPublication(object id);
         List<Publication> GetPublicationByAuthorId(int authorId);
         List<Publication> GetPublicationByOrderId(int orderId);
         List<Publication> GetPublicationByCustomerId(int customerId);

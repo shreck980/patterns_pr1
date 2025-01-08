@@ -1,4 +1,5 @@
-﻿using MySqlConnector;
+﻿using MongoDB.Bson;
+using MySqlConnector;
 using noslq_pr.Builder;
 using noslq_pr.Entities;
 using noslq_pr.Observer;
@@ -35,11 +36,14 @@ namespace noslq_pr.DAO.MYSQL
         //private const string insertAddress = "insert into address_book (address_id, country, city, street, house,apartment) values(@address_id, @country, @city, @street, @house,@appartment)";
 
         private const string getLittle = "select * from `order` where id=@id;";
+        private const string getAllOrder = "SELECT \r\n    o.id AS order_id,\r\n    o.acceptance_date AS order_date,\r\n    o.status AS order_status,\r\n    o.total_price AS order_total_price,\r\n    o.customer AS order_customer,\r\n    o.printing_house AS order_printing_house,\r\n    p.name AS name,\r\n    p.surname AS surname,\r\n    p.email AS person_email,\r\n    p.phone_number AS person_phone,\r\n    c.customer_type_id AS customer_type,\r\n    ph.id AS printing_house_id,\r\n    ph.name AS printing_house_name,\r\n    ph.phone_number AS printing_house_contact_phone,\r\n     pa.country AS person_country,\r\n\tpa.address_id as person_address_id,\r\n    pa.city AS person_city,\r\n    pa.street AS person_street,\r\n    pa.house AS person_house,\r\n    pa.apartment AS person_apartment,\r\n    pha.address_id as pha_address_id,\r\n\tpha.country AS printing_house_country,\r\n    pha.city AS printing_house_city,\r\n    pha.street AS printing_house_street,\r\n    pha.house AS printing_house_house,\r\n    pha.apartment AS printing_house_apartment\r\nFROM `order` o\r\nJOIN person p ON p.id = o.customer\r\nJOIN customer c ON c.id = p.id\r\nJOIN printing_house ph ON ph.id = o.printing_house\r\nJOIN address_book pa ON pa.address_id = p.address_book_address_id\r\nJOIN address_book pha ON pha.address_id = ph.address;";
         private const string getLittleDate = "SELECT * FROM `order` WHERE DATE(acceptance_date) = @date;";
-        private const string getLittleCustomer = "SELECT * FROM `order` WHERE customer = @customer;";
+        private const string getLittleCustomer = "SELECT * FROM `order` o\r\njoin person p on o.customer =p.id\r\nWHERE p.email = @email;";
         private const string getLittleStatus = "SELECT * FROM `order` WHERE status = @status;";
 
         private readonly MYSQLPublicationDAO publicationDAO;
+        private readonly MySQLCustomerDAO customerDAO;
+        private readonly MySQLPrintingHouseDAO printingHouseDAO;
 
         private List<IObserver> _observers = new List<IObserver>();
         public MySQLOrderDAO()
@@ -49,7 +53,9 @@ namespace noslq_pr.DAO.MYSQL
             GetLastID = "select max(id) from `order`;";
 
             DAOFactory factory = DAOFactory.Instance;
+            customerDAO = (MySQLCustomerDAO)factory.GetCustomerDAO();
             publicationDAO = (MYSQLPublicationDAO)factory.GetPublicationDAO();
+            printingHouseDAO = (MySQLPrintingHouseDAO)factory.GetPrintingHouseDAO();
 
         }
 
@@ -115,59 +121,66 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.Error.WriteLine(e.Message);
-                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
-                           o, e.Message);
+                        //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                          // o, e.Message);
                     }
-                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
-                           o, result.ToString());
+                    //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                         //  o, result.ToString());
                 }
             }
         }
 
-        public Order GetOrder(long id)
+        public Order GetOrder(object objectId)
         {
-            OrderBuilder p = new OrderBuilder();
-            try
+            if (objectId is long id)
             {
-                using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
+                OrderBuilder p = new OrderBuilder();
+                try
                 {
-                    con.Open();
-
-
-                    using (var cmd = new MySqlCommand(getLittle, con))
+                    using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
                     {
-                        cmd.Parameters.AddWithValue("@id", id);
+                        con.Open();
 
-                        using (var reader = cmd.ExecuteReader())
+
+                        using (var cmd = new MySqlCommand(getLittle, con))
                         {
+                            cmd.Parameters.AddWithValue("@id", id);
 
-                            if (!reader.HasRows)
+                            using (var reader = cmd.ExecuteReader())
                             {
-                                throw new Exception("No data found for the query.");
+
+                                if (!reader.HasRows)
+                                {
+                                    throw new Exception("No data found for the query.");
+
+                                }
+                                while (reader.Read())
+                                {
+                                    p = MapOrder(reader);
+
+
+                                }
 
                             }
-                            while (reader.Read())
-                            {
-                                 p = MapOrder(reader);
-
-
-                            }
-
                         }
-                    }
 
+                        
+
+                    }
                 }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                }
+                return p.Build();
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-            }
-            return p.Build();
+            throw new Exception("Wrong id type.");
         }
 
 
         public List<Order> GetOrderbyDate(DateTime date)
         {
+
             List<Order> p = new List<Order>();
             try
             {
@@ -207,46 +220,48 @@ namespace noslq_pr.DAO.MYSQL
             return p;
         }
 
-        public List<Order> GetOrderbyCustomer(long custoemrId)
+        public List<Order> GetOrderbyCustomer(string email)
         {
+           
 
-            List<Order> p = new List<Order>();
-            try
-            {
-                using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
+                List<Order> p = new List<Order>();
+                try
                 {
-                    con.Open();
-
-
-                    using (var cmd = new MySqlCommand(getLittleCustomer, con))
+                    using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
                     {
-                        cmd.Parameters.AddWithValue("@customer", custoemrId);
+                        con.Open();
 
-                        using (var reader = cmd.ExecuteReader())
+
+                        using (var cmd = new MySqlCommand(getLittleCustomer, con))
                         {
+                            cmd.Parameters.AddWithValue("@email", email);
 
-                            if (!reader.HasRows)
+                            using (var reader = cmd.ExecuteReader())
                             {
-                                throw new Exception("No data found for the query.");
+
+                                if (!reader.HasRows)
+                                {
+                                    throw new Exception("No data found for the query.");
+
+                                }
+                                while (reader.Read())
+                                {
+                                    p.Add(MapOrder(reader).Build());
+
+
+                                }
 
                             }
-                            while (reader.Read())
-                            {
-                                p.Add(MapOrder(reader).Build());
-
-
-                            }
-
                         }
-                    }
 
+                    }
                 }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-            }
-            return p;
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                }
+                return p;
+            
         }
 
         public List<Order> GetOrderbyStatus(OrderStatus status)
@@ -297,11 +312,59 @@ namespace noslq_pr.DAO.MYSQL
             p.SetId(reader.GetInt64("id"));
             p.SetAcceptanceDate( reader.GetDateTime("acceptance_date"));
             p.SetOrderStatus((OrderStatus)reader.GetInt32("status"));
-            p.SetPrintingHouse(new PrintingHouseBuilder().SetId(reader.GetInt32("printing_house")).Build());
-            p.SetCustomer(new CustomerBuilder().SetId(reader.GetInt32("customer")).Build());
+            p.SetPrintingHouse(new PrintingHouseBuilder().SetId(reader.GetInt32("printing_house")).SetName(reader.GetString("name")).Build());
+            p.SetCustomer(new CustomerBuilder().SetId(reader.GetInt32("customer")).SetEmail(reader.GetString("email")).Build());
             p.SetPrice(reader.GetDecimal("total_price"));
             return p;
 
+        }
+        OrderBuilder MapFullOrder(MySqlDataReader reader)
+        {
+            OrderBuilder order = new OrderBuilder();
+
+
+            order.SetId(reader.GetInt64("order_id"));
+            order.SetAcceptanceDate(reader.GetDateTime("order_date"));
+            order.SetOrderStatus((OrderStatus)reader.GetInt32("order_status"));
+            order.SetPrice(reader.GetDecimal("order_total_price"));
+           
+
+            // Set customer details
+            var customerBuilder = new CustomerBuilder()
+                .SetId(reader.GetInt32("order_customer"))
+                .SetEmail(reader.GetString("person_email"))
+                .SetCustomerType((CustomerType)reader.GetInt32("customer_type"))
+                .SetPhoneNumber(reader.GetString("person_phone"))
+                .SetName(reader.GetString("name"))
+                .SetSurname(reader.GetString("surname"))
+                    .SetAddressId(reader.GetInt32("person_address_id"))
+                    .SetCountry(reader.GetString("person_country"))
+                    .SetCity(reader.GetString("person_city"))
+                    .SetStreet(reader.GetString("person_street"))
+                    .SetHouse(reader.GetInt32("person_house"));
+                    
+            var apartment = reader.GetInt32("person_apartment");
+            customerBuilder.SetAppartment(reader.IsDBNull(reader.GetOrdinal("person_apartment")) ? 0 : apartment);
+
+            order.SetCustomer(customerBuilder.Build());
+
+            // Set printing house details
+            var printingHouseBuilder = new PrintingHouseBuilder()
+                .SetId(reader.GetInt32("printing_house_id"))
+                .SetName(reader.GetString("printing_house_name"))
+                .SetPhoneNumber(reader.GetString("printing_house_contact_phone"))
+
+                    .SetAddressId(reader.GetInt32("pha_address_id"))
+                    .SetCountry(reader.GetString("printing_house_country"))
+                    .SetCity(reader.GetString("printing_house_city"))
+                    .SetStreet(reader.GetString("printing_house_street"))
+                    .SetHouse(reader.GetInt32("printing_house_house"));
+            apartment = reader.GetInt32("printing_house_apartment");
+            printingHouseBuilder.SetAppartment(reader.IsDBNull(reader.GetOrdinal("printing_house_apartment")) ? 0 : apartment);
+
+            order.SetPrintingHouse(printingHouseBuilder.Build());
+
+            return order;
         }
 
         public void UpdateOrder(Order a)
@@ -439,6 +502,128 @@ namespace noslq_pr.DAO.MYSQL
             foreach (var o in _observers)
             {
                 o.Update(operation, criteria, result);
+            }
+        }
+
+        public List<Order> GetAllOrder()
+        {
+
+            List<Order> p = new List<Order>();
+            try
+            {
+                using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
+                {
+                    con.Open();
+
+
+                    using (var cmd = new MySqlCommand(getAllOrder, con))
+                    {
+                       
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+
+                            if (!reader.HasRows)
+                            {
+                                throw new Exception("No data found for the query.");
+
+                            }
+                            while (reader.Read())
+                            {
+                                // TODO: тут помилка у мапі
+                                p.Add(MapFullOrder(reader).Build());
+
+
+                            }
+
+                        }
+                    }
+
+                    foreach (var o in p)
+                    {
+                        o.Publications =  publicationDAO.GetPublicationByOrderId(con,o.Id);
+                    }
+
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+            return p;
+        }
+
+        public void AddOrders(List<Order> list)
+        {
+            if (publicationDAO == null)
+            {
+                throw new Exception("publication dao is null");
+            }
+
+            StringBuilder result = new StringBuilder();
+            using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
+            {
+                con.Open();
+                using (var transaction = con.BeginTransaction(IsolationLevel.ReadCommitted))
+                {
+
+                    try
+                    {
+                        foreach (var o in list)
+                        {
+                            printingHouseDAO.AddPrintingHouseOrder(o.PrintingHouse,con,transaction);
+                            customerDAO.AddCustomerOrder(o.Customer,con, transaction);
+                          
+
+                            o.Id = GetLastId(con, transaction) + 1;
+                            using (var c = new MySqlCommand(insertOrder, con))
+                            {
+                                c.Transaction = transaction;
+                                c.Parameters.AddWithValue("@id", o.Id);
+                                c.Parameters.AddWithValue("@acceptance_date", o.AcceptanceDate);
+                                c.Parameters.AddWithValue("@status", o.Status);
+                                c.Parameters.AddWithValue("@customer", o.Customer.Id);
+                                c.Parameters.AddWithValue("@total_price", o.Price);
+                                c.Parameters.AddWithValue("@printing_house", o.PrintingHouse.Id);
+
+                                int rowsAffected = c.ExecuteNonQuery();
+                                result.Append($"Insert Order: {rowsAffected} row(s) inserted;\n");
+
+                            }
+
+                            foreach (var p in o.Publications)
+                            {
+                                publicationDAO.AddPublication(p, transaction, con, result);
+
+
+                                using (var com = new MySqlCommand(insertPublToOrder, con))
+                                {
+                                    com.Transaction = transaction;
+
+                                    com.Parameters.AddWithValue("@order", o.Id);
+                                    com.Parameters.AddWithValue("@punlication", p.Id);
+                                    com.Parameters.AddWithValue("@print_quality", PrintQuality.High);
+                                    com.Parameters.AddWithValue("@quantity", p.Quantity);
+                                    int rowsAffected = com.ExecuteNonQuery();
+                                    result.Append($"Add publication to order: {rowsAffected} row(s) inserted;\n");
+
+                                }
+
+                            }
+                           
+                        }
+                        transaction.Commit();
+                    }
+                    catch (MySqlException e)
+                    {
+                        transaction.Rollback();
+                        Console.Error.WriteLine(e.Message);
+                        //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                        // o, e.Message);
+                    }
+                    //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                    //  o, result.ToString());
+                }
             }
         }
     }

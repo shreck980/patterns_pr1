@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using MongoDB.Driver;
 using MySqlConnector;
 using noslq_pr.Builder;
 using noslq_pr.Entities;
@@ -24,6 +25,7 @@ namespace noslq_pr.DAO.MYSQL
         private const string insertAddress = "insert into address_book (address_id, country, city, street, house,apartment) values(@address_id, @country, @city, @street, @house,@appartment)";
 
         private const string insertPrintingHouse = "insert into printing_house (id,name,phone_number,address) values(@id, @name,@phone_number, @address)";
+        private const string ifExistsByName = "select id from printing_house where name = @name_ph limit 1;";
 
         private List<IObserver> _observers = new List<IObserver>();
 
@@ -78,54 +80,131 @@ namespace noslq_pr.DAO.MYSQL
                     {
                         transaction.Rollback();
                         Console.Error.WriteLine(e.Message);
-                        Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
-                          c, e.Message);
+                        //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                          //c, e.Message);
                     }
 
-                    Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
-                          c,result.ToString());
+                    //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                         // c,result.ToString());
                 }
             }
         }
-
-        public PrintingHouse GetPrintingHouse(int id)
+        public void AddPrintingHouseOrder(PrintingHouse c, MySqlConnection con, MySqlTransaction transaction)
         {
-            PrintingHouseBuilder p = new PrintingHouseBuilder();
+            StringBuilder result = new StringBuilder();
+
             try
             {
-                using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
-            {
-                con.Open();
-
-
-                using (var cmd = new MySqlCommand(getFull, con))
+                using (var com = new MySqlCommand(ifExistsByName, con))
                 {
-                    cmd.Parameters.AddWithValue("@id", id);
-                    
-                        using (var reader = cmd.ExecuteReader())
+                    com.Transaction = transaction;
+                   
+                    com.Parameters.AddWithValue("@name_ph", c.Name);
+                    using (var reader = com.ExecuteReader())
+                    {
+
+                        if (reader.HasRows)
                         {
 
-                            if (!reader.HasRows)
-                            {
-                                throw new Exception("No data found for the query.");
-
-                            }
                             while (reader.Read())
                             {
-                                p = MapPrintingHouse(reader);
+                                c.Id = reader.GetInt32("id");
+
 
                             }
-
+                            return;
                         }
+
                     }
-                    
+
                 }
+
+                c.Address.Id = GetLastId(con, transaction, "select max(address_id) from address_book") + 1;
+                using (var com = new MySqlCommand(insertAddress, con))
+                {
+                    com.Transaction = transaction;
+                    com.Parameters.AddWithValue("@address_id", c.Address.Id);
+                    com.Parameters.AddWithValue("@country", c.Address.Country);
+                    com.Parameters.AddWithValue("@city", c.Address.City);
+                    com.Parameters.AddWithValue("@street", c.Address.Street);
+                    com.Parameters.AddWithValue("@house", c.Address.House);
+                    com.Parameters.AddWithValue("@appartment",
+                        c.Address.Apartment.HasValue ? c.Address.Apartment : 0);
+
+                    int rowsAffected = com.ExecuteNonQuery();
+                    result.Append($"Insert Address: {rowsAffected} row(s) updated; ");
+
+                }
+
+                c.Id = GetLastId(con, transaction) + 1;
+                using (var com = new MySqlCommand(insertPrintingHouse, con))
+                {
+                    com.Transaction = transaction;
+                    com.Parameters.AddWithValue("@name", c.Name);
+                    com.Parameters.AddWithValue("@id", c.Id);
+                    com.Parameters.AddWithValue("@phone_number", c.PhoneNumber);
+                    com.Parameters.AddWithValue("@address", c.Address.Id);
+
+                    int rowsAffected = com.ExecuteNonQuery();
+                    result.Append($"Insert Printing House: {rowsAffected} row(s) updated; ");
+                }
+                
             }
-            catch (Exception e)
+            catch (MySqlException e)
             {
-                Console.WriteLine(e.ToString());
+                transaction.Rollback();
+                Console.Error.WriteLine(e.Message);
+                //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                //c, e.Message);
             }
-            return p.Build();
+
+            //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+            // c,result.ToString());
+
+
+        }
+        public PrintingHouse GetPrintingHouse(object objectId)
+        {
+            if (objectId is int id)
+            {
+                PrintingHouseBuilder p = new PrintingHouseBuilder();
+                try
+                {
+                    using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
+                    {
+                        con.Open();
+
+
+                        using (var cmd = new MySqlCommand(getFull, con))
+                        {
+                            cmd.Parameters.AddWithValue("@id", id);
+
+                            using (var reader = cmd.ExecuteReader())
+                            {
+
+                                if (!reader.HasRows)
+                                {
+                                    throw new Exception("No data found for the query.");
+
+                                }
+                                while (reader.Read())
+                                {
+                                    p = MapPrintingHouse(reader);
+
+                                }
+
+                            }
+                        }
+
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                }
+                return p.Build();
+            }
+            throw new Exception("Wrong id type.");
         }
 
 
@@ -375,6 +454,65 @@ namespace noslq_pr.DAO.MYSQL
             foreach (var obs in _observers)
             {
                 obs.Update(operation, criteria, result);
+            }
+        }
+
+        public void AddPrintingHouses(List<PrintingHouse> list)
+        {
+            StringBuilder result = new StringBuilder();
+            using (MySqlConnection con = new MySqlConnection(daoConfig.Url))
+            {
+                con.Open();
+                using (var transaction = con.BeginTransaction(IsolationLevel.ReadCommitted))
+                {
+
+                    try
+                    {
+                        foreach (var c in list)
+                        {
+                            c.Address.Id = GetLastId(con, transaction, "select max(address_id) from address_book") + 1;
+                            using (var com = new MySqlCommand(insertAddress, con))
+                            {
+                                com.Transaction = transaction;
+                                com.Parameters.AddWithValue("@address_id", c.Address.Id);
+                                com.Parameters.AddWithValue("@country", c.Address.Country);
+                                com.Parameters.AddWithValue("@city", c.Address.City);
+                                com.Parameters.AddWithValue("@street", c.Address.Street);
+                                com.Parameters.AddWithValue("@house", c.Address.House);
+                                com.Parameters.AddWithValue("@appartment",
+                                    c.Address.Apartment.HasValue ? c.Address.Apartment : 0);
+
+                                int rowsAffected = com.ExecuteNonQuery();
+                                result.Append($"Insert Address: {rowsAffected} row(s) updated; ");
+
+                            }
+
+                            c.Id = GetLastId(con, transaction) + 1;
+                            using (var com = new MySqlCommand(insertPrintingHouse, con))
+                            {
+                                com.Transaction = transaction;
+                                com.Parameters.AddWithValue("@name", c.Name);
+                                com.Parameters.AddWithValue("@id", c.Id);
+                                com.Parameters.AddWithValue("@phone_number", c.PhoneNumber);
+                                com.Parameters.AddWithValue("@address", c.Address.Id);
+
+                                int rowsAffected = com.ExecuteNonQuery();
+                                result.Append($"Insert Printing House: {rowsAffected} row(s) updated; ");
+                            }
+                        }
+                        transaction.Commit();
+                    }
+                    catch (MySqlException e)
+                    {
+                        transaction.Rollback();
+                        Console.Error.WriteLine(e.Message);
+                        //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                        //c, e.Message);
+                    }
+
+                    //Notify(System.Reflection.MethodBase.GetCurrentMethod().Name,
+                    // c,result.ToString());
+                }
             }
         }
     }

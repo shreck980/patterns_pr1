@@ -1,4 +1,6 @@
-﻿using noslq_pr.Builder;
+﻿using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson;
+using noslq_pr.Builder;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,13 +11,14 @@ namespace noslq_pr.Entities
 {
     public class Customer :Person
     {
-        
+        [BsonRepresentation(BsonType.String)]
         public CustomerType CustomerType { get; set; }
 
 
         public Customer(CustomerBuilder c)
         {
             this.Id = c.Id;
+            this.ObjectId = c.ObjectId;
             this.Name = c.Name;
             this.Email = c.Email;
             this.PhoneNumber = c.PhoneNumber;

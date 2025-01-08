@@ -1,4 +1,5 @@
-﻿using noslq_pr.Entities;
+﻿using MongoDB.Bson;
+using noslq_pr.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,7 @@ namespace noslq_pr.Builder
     public class PublicationBuilder
     {
         public long Id { get; private set; }
+        public ObjectId ObjectId { get; private set; }
         public string Title { get; private set; }
         public int PageCount { get; private set; }
         public int Circulation { get; private set; }
@@ -34,6 +36,11 @@ namespace noslq_pr.Builder
         public PublicationBuilder SetId(long id)
         {
             Id = id;
+            return this;
+        }
+        public PublicationBuilder SetObjectId(ObjectId id)
+        {
+            ObjectId = id;
             return this;
         }
         public PublicationBuilder SetTitle(string Title)

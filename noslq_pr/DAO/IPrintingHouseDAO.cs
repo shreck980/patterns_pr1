@@ -11,8 +11,9 @@ namespace noslq_pr.DAO
     public interface IPrintingHouseDAO : ISubject 
     {
         void AddPrintingHouse(PrintingHouse printingHouse);
+        void AddPrintingHouses(List<PrintingHouse> list);
         void UpdatePrintingHouse(PrintingHouse printingHouse);
-        PrintingHouse GetPrintingHouse(int id);
+        PrintingHouse GetPrintingHouse(object objectId);
         PrintingHouse GetPrintingHouseByName(string name);
         List<PrintingHouse> GetPrintingHouseByCountry(string country);
         List<PrintingHouse> GetAllPrintingHouse();
